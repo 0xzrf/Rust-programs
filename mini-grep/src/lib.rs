@@ -23,7 +23,11 @@ impl Config {
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let file = fs::read_to_string(&config.file_path)?;
 
-    println!("Content of the file: \n{}", file);   
+    
+    for line in search(&config.query, &file) {
+        println!("{line}");
+    }
+
 
     Ok(())
 }
@@ -35,10 +39,19 @@ mod tests {
 
     #[test]
     fn one_result(){
-        let query = "something";
+        let query = "safe";
         let content = "\
-        Rust:
-        safe and secure";
+Rust:
+safe and secure
+safety is something very important,
+you are safe
+but I'm not safe
+what is something
+you are what?
+safe is safe
+";
+
+        dbg!(search(query, content));
 
         assert_eq!(vec!("safe and secure"), search(query, content));
 
@@ -46,6 +59,15 @@ mod tests {
 }
 
 
-pub fn search<'a>(query: &'a str, content: &'a str) -> Vec<&'a str> {
-    vec![]
+pub fn search<'a>(query: &str, content: &'a str) -> Vec<&'a str> {
+    
+    let mut results: Vec<&str> = Vec::new();
+
+    for line in content.lines() {
+        if line.contains(query) {
+            results.push(line);
+        }
+    }
+
+    results
 }
