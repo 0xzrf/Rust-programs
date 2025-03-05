@@ -1,5 +1,5 @@
 [package]
-name = "cmd-tool"
+name = "mini-grep"
 version = "0.1.0"
 edition = "2024"
 
