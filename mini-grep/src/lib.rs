@@ -27,3 +27,25 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn one_result(){
+        let query = "something";
+        let content = "\
+        Rust:
+        safe and secure";
+
+        assert_eq!(vec!("safe and secure"), search(query, content));
+
+    }
+}
+
+
+pub fn search<'a>(query: &'a str, content: &'a str) -> Vec<&'a str> {
+    vec![]
+}
