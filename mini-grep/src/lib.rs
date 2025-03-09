@@ -89,15 +89,12 @@ safe is safe
 }
 
 pub fn search<'a>(query: &str, content: &'a str) -> Vec<&'a str> {
-    let mut results: Vec<&str> = Vec::new();
 
-    for line in content.lines() {
-        if line.contains(query) {
-            results.push(line);
-        }
-    }
+    content
+        .lines()
+        .filter(|line| line.contains(query))
+        .collect()
 
-    results
 }
 
 
