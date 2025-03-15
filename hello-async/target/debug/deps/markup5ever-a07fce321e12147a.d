@@ -1,0 +1,15 @@
+/home/zrf/projects/Rust-programs/hello-async/target/debug/deps/libmarkup5ever-a07fce321e12147a.rmeta: /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/lib.rs /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/data/mod.rs /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/interface/mod.rs /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/interface/tree_builder.rs /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/serialize.rs /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/util/buffer_queue.rs /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/util/smallcharset.rs /home/zrf/projects/Rust-programs/hello-async/target/debug/build/markup5ever-944b2b49e98bc6c9/out/generated.rs /home/zrf/projects/Rust-programs/hello-async/target/debug/build/markup5ever-944b2b49e98bc6c9/out/named_entities.rs
+
+/home/zrf/projects/Rust-programs/hello-async/target/debug/deps/markup5ever-a07fce321e12147a.d: /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/lib.rs /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/data/mod.rs /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/interface/mod.rs /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/interface/tree_builder.rs /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/serialize.rs /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/util/buffer_queue.rs /home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/util/smallcharset.rs /home/zrf/projects/Rust-programs/hello-async/target/debug/build/markup5ever-944b2b49e98bc6c9/out/generated.rs /home/zrf/projects/Rust-programs/hello-async/target/debug/build/markup5ever-944b2b49e98bc6c9/out/named_entities.rs
+
+/home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/lib.rs:
+/home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/data/mod.rs:
+/home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/interface/mod.rs:
+/home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/interface/tree_builder.rs:
+/home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/serialize.rs:
+/home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/util/buffer_queue.rs:
+/home/zrf/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/markup5ever-0.12.1/util/smallcharset.rs:
+/home/zrf/projects/Rust-programs/hello-async/target/debug/build/markup5ever-944b2b49e98bc6c9/out/generated.rs:
+/home/zrf/projects/Rust-programs/hello-async/target/debug/build/markup5ever-944b2b49e98bc6c9/out/named_entities.rs:
+
+# env-dep:OUT_DIR=/home/zrf/projects/Rust-programs/hello-async/target/debug/build/markup5ever-944b2b49e98bc6c9/out
