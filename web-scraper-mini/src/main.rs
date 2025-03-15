@@ -1,55 +1,34 @@
-use trpl::Html;
+use trpl::{Html, Either};
 use std::env::args;
 
-async fn page_title(url: &String) -> Option<String> {
+async fn page_title(url: &str) -> (&str, Option<String>) {
     let response = trpl::get(url).await.text().await;
-    Html::parse(&response)
+    let title = Html::parse(&response)
         .select_first("title")
-        .map(|title_element| title_element.inner_html())
+        .map(|title_element| title_element.inner_html());
+    (url, title)
 }
 
 fn main() {
+    let arg: Vec<String> = args().collect();
 
     trpl::run(async {
-        let urls = match Urls::build(args()) {
-            Ok(urls) => urls,
-            Err(err) => return eprint!("Error parsing the urls: {err}")
+        let url_1 = page_title(&arg[1]);
+        let url_2 = page_title(&arg[2]);
+        
+        let (url, maybe_title) = match trpl::race(url_1, url_2).await {
+            Either::Left(left) => left,
+            Either::Right(right) => right
         };
 
-        match page_title(&urls.url_1).await {
-            Some(title) => println!("The title for {} is:\n{title}", &urls.url_1),
-            None => println!("provided url had no title")
-        };
 
-    })    
+        println!("{url} returned first");
+
+        match maybe_title {
+            Some(title) => println!("The title for url: {url} is: {title}"),
+            None => println!("No title found for url: {url}")
+        }
+    })        
 
 }
 
-
-struct Urls {
-    pub url_1: String,
-    pub url_2: String
-}
-
-
-impl Urls {
-    pub fn build(mut args: impl Iterator<Item = String>) -> Result<Urls, &'static str> {
-        args.next();
-
-        let url_1 = match args.next() {
-            Some(url) => url,
-            None => return Err("1st URL not provided")
-        };
-
-        let url_2 = match args.next() {
-            Some(url) => url,
-            None => return Err("2nd URL not provided")
-        };
-
-        Ok(Urls {
-            url_1: url_1,
-            url_2: url_2
-        })
-
-    }
-}
