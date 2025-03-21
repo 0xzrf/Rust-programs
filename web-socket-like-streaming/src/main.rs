@@ -1,12 +1,16 @@
 use trpl::{ReceiverStream, Stream, StreamExt};
+use std::{pin::pin, time::Duration};
 
 fn main() {
 
     trpl::run(async {
-        let mut messages = get_messages();
+        let mut messages = pin!(get_messages().timeout(Duration::from_millis(200)));
 
-        while let Some(message) = messages.next().await {
-            println!("{message}");
+        while let Some(result) = messages.next().await {
+            match result {
+                Ok(msg) => println!("{msg}"),
+                Err(_) => println!("The message took too long to arrive"),   
+            }
         }
 
     })
