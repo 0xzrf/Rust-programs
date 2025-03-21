@@ -3,6 +3,7 @@ use std::{
     net::{TcpListener, TcpStream},
     io::{prelude::*, BufReader}
 };
+use web_server::ThreadPool;
 
 fn main() {
 
@@ -10,11 +11,13 @@ fn main() {
         Ok(val) => val,
         Err(e) => panic!("Unable to initilize the server: {e}")
     };
+    let pool = ThreadPool::new(4);
 
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
-
-        handle_connection(stream); 
+        pool.execute(|| {
+            handle_connection(stream);
+        })
     }
 
 }
