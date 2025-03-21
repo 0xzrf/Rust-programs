@@ -2,7 +2,17 @@ pub struct ThreadPool;
 
 
 impl ThreadPool {
-    pub fn new(limit: u32) -> ThreadPool {
+    /// Creates a new ThreadPool
+    ///
+    /// The limit is the number of threads in the pool.
+    ///
+    /// #Panics 
+    ///
+    /// The new function will panic if the limit is zero.
+    pub fn new(limit: usize) -> ThreadPool {
+        assert!(size > 0);
+
+
         ThreadPool
     }
 
