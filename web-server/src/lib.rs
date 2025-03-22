@@ -2,14 +2,32 @@ use std::{thread, sync::{mpsc, Arc, Mutex}};
 
 pub struct ThreadPool{
     worker: Vec<Worker>, // Since the closure won't return a value, we will have the () as the return value
-    sender: mpsc::Sender<Job>
+    sender: Option<mpsc::Sender<Job>>
 }
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
 pub struct Worker {
     id: usize,
-    handle: thread::JoinHandle<()>
+    handle: Option<thread::JoinHandle<()>>
+}
+
+impl Drop for ThreadPool {
+
+    fn drop(&mut self) {
+        drop(self.sender.take());
+
+        for worker in &mut self.worker {
+
+            println!("Shutting down the worker iwith ID: {}", worker.id);
+
+            if let Some(val) = worker.handle.take() {
+                val.join().unwrap();
+            }
+
+        }
+
+    }
 }
 
 
@@ -36,7 +54,7 @@ impl ThreadPool {
             worker.push(Worker::new(id, Arc::clone(&receiver)));
         }
 
-        Ok(ThreadPool{ worker, sender })
+        Ok(ThreadPool{ worker, sender: Some(sender) })
     }
 
     pub fn execute<F>(&self, f: F) 
@@ -45,7 +63,7 @@ impl ThreadPool {
         {
             let job = Box::new(f);
 
-            self.sender.send(job).unwrap();
+            self.sender.as_ref().unwrap().send(job).unwrap();
 
         }
 }
@@ -64,7 +82,7 @@ impl Worker {
 
         Worker {
             id,
-            handle
+            handle: Some(handle)
         }
     }
 }
