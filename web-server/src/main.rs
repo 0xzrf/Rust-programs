@@ -8,17 +8,22 @@ use web_server::ThreadPool;
 fn main() {
 
     let listener = match TcpListener::bind("127.0.0.1:3000") {
-        Ok(val) => val,
+        Ok(val) => {
+            println!("Started the server at http://localhost:3000");    
+            val
+        },
         Err(e) => panic!("Unable to initilize the server: {e}")
     };
     let pool = ThreadPool::build(4).unwrap();
 
-    for stream in listener.incoming() {
-        let mut stream = stream.unwrap();
+    for stream in listener.incoming().take(2) {
+        let stream = stream.unwrap();
         pool.execute(|| {
             handle_connection(stream);
         })
     }
+
+    println!("Shutting down the server");
 
 }
 

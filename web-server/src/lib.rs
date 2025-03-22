@@ -57,6 +57,9 @@ impl ThreadPool {
         Ok(ThreadPool{ worker, sender: Some(sender) })
     }
 
+    /// Takes a closure and then sends it to the Worker
+    /// 
+    /// this method sends the closure passed to the execute function to the Worker available
     pub fn execute<F>(&self, f: F) 
     where
         F: FnOnce() + Send + 'static, 
@@ -70,6 +73,9 @@ impl ThreadPool {
 
 
 impl Worker {
+    /// This method takes an id and a receiver
+    /// 
+    /// The receiver is safe to use since it is inside Mutex, which restricts usage from multiple places at once
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>> ) -> Worker {
 
         let handle = thread::spawn(move|| loop {
