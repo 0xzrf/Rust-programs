@@ -75,7 +75,9 @@ impl ThreadPool {
 impl Worker {
     /// This method takes an id and a receiver
     /// 
-    /// The receiver is safe to use since it is inside Mutex, which restricts usage from multiple places at once
+    /// The receiver is safe to use since it is inside Mutex, which restricts usage from multiple places at once`
+    /// 
+    /// Hence avoiding multiple usage of receiver at once
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>> ) -> Worker {
 
         let handle = thread::spawn(move|| loop {
@@ -93,7 +95,8 @@ impl Worker {
     }
 }
 
-
+/// We could include more errors and handle the Result in a better manner
+/// for now, that's all I got
 #[derive(Debug)]
 pub enum PoolCreationError {
     InvalidLimit
