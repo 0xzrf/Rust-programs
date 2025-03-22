@@ -5,7 +5,7 @@ pub struct ThreadPool{
     sender: mpsc::Sender<Job>
 }
 
-struct Job;
+type Job = Box<dyn FnOnce() + Send + 'static>;
 
 pub struct Worker {
     id: usize,
@@ -22,7 +22,7 @@ impl ThreadPool {
     ///
     /// The new function will panic if the limit is zero.
     pub fn build(limit: usize) -> Result<ThreadPool, PoolCreationError> {
-        if limit > 0 {
+        if limit == 0 {
             return Err(PoolCreationError::InvalidLimit);
         }
         
@@ -43,7 +43,10 @@ impl ThreadPool {
     where
         F: FnOnce() + Send + 'static, 
         {
-            
+            let job = Box::new(f);
+
+            self.sender.send(job).unwrap();
+
         }
 }
 
@@ -51,8 +54,12 @@ impl ThreadPool {
 impl Worker {
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>> ) -> Worker {
 
-        let handle = thread::spawn(|| {
-            receiver;
+        let handle = thread::spawn(move|| loop {
+            let job = receiver.lock().unwrap().recv().unwrap();
+
+            println!("Worker {id} receired a job, executing");
+
+            job();
         });
 
         Worker {
