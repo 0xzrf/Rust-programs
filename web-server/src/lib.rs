@@ -1,4 +1,14 @@
-pub struct ThreadPool;
+use std::thread;
+
+pub struct ThreadPool{
+    thread: Vec<threads::JoinHandle<()>>, // Since the closure won't return a value, we will have
+                                          // the () as the return value
+};
+
+#[derive(Debug)]
+pub enum PoolCreationError {
+    InvalidLimit
+}
 
 
 impl ThreadPool {
@@ -9,17 +19,20 @@ impl ThreadPool {
     /// #Panics 
     ///
     /// The new function will panic if the limit is zero.
-    pub fn new(limit: usize) -> ThreadPool {
-        assert!(size > 0);
+    pub fn build(limit: usize) -> Result<ThreadPool, PoolCreationError> {
+        if limit > 0 {
+            return Err(PoolCreationError::InvalidLimit);
+        }
+        
 
 
-        ThreadPool
+        Ok(ThreadPool)
     }
 
     pub fn execute<F>(&self, f: F) 
     where
         F: FnOnce() + Send + 'static, 
         {
-
+            
         }
 }

@@ -11,7 +11,7 @@ fn main() {
         Ok(val) => val,
         Err(e) => panic!("Unable to initilize the server: {e}")
     };
-    let pool = ThreadPool::new(4);
+    let pool = ThreadPool::build(4).unwrap();
 
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
