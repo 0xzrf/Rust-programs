@@ -1,27 +1,17 @@
-use std::thread;
+use std::{thread, sync::{mpsc, Arc, Mutex}};
 
 pub struct ThreadPool{
-    threads: Vec<Worker>, // Since the closure won't return a value, we will have                                           // the () as the return value
+    worker: Vec<Worker>, // Since the closure won't return a value, we will have the () as the return value
+    sender: mpsc::Sender<Job>
 }
+
+struct Job;
 
 pub struct Worker {
     id: usize,
     handle: thread::JoinHandle<()>
 }
 
-impl Worker {
-    pub fn new(id: usize) -> Worker {
-
-        let handle = thread::spawn(|| {
-            ()
-        });
-
-        Worker {
-            id,
-            handle
-        }
-    }
-}
 
 impl ThreadPool {
     /// Creates a new ThreadPool
@@ -36,13 +26,17 @@ impl ThreadPool {
             return Err(PoolCreationError::InvalidLimit);
         }
         
-        let mut threads = Vec::with_capacity(limit);
+        let (sender, receiver) = mpsc::channel();
 
-        for i in 0..limit {
-            threads.push(Worker::new(i));
+        let mut worker = Vec::with_capacity(limit);
+
+        let receiver = Arc::new(Mutex::new(receiver));
+
+        for id in 0..limit {
+            worker.push(Worker::new(id, Arc::clone(&receiver)));
         }
 
-        Ok(ThreadPool{ threads })
+        Ok(ThreadPool{ worker, sender })
     }
 
     pub fn execute<F>(&self, f: F) 
@@ -53,6 +47,20 @@ impl ThreadPool {
         }
 }
 
+
+impl Worker {
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>> ) -> Worker {
+
+        let handle = thread::spawn(|| {
+            receiver;
+        });
+
+        Worker {
+            id,
+            handle
+        }
+    }
+}
 
 
 #[derive(Debug)]
