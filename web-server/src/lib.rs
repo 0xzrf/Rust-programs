@@ -1,15 +1,27 @@
 use std::thread;
 
 pub struct ThreadPool{
-    thread: Vec<threads::JoinHandle<()>>, // Since the closure won't return a value, we will have
-                                          // the () as the return value
-};
-
-#[derive(Debug)]
-pub enum PoolCreationError {
-    InvalidLimit
+    threads: Vec<Worker>, // Since the closure won't return a value, we will have                                           // the () as the return value
 }
 
+pub struct Worker {
+    id: usize,
+    handle: thread::JoinHandle<()>
+}
+
+impl Worker {
+    pub fn new(id: usize) -> Worker {
+
+        let handle = thread::spawn(|| {
+            ()
+        });
+
+        Worker {
+            id,
+            handle
+        }
+    }
+}
 
 impl ThreadPool {
     /// Creates a new ThreadPool
@@ -24,9 +36,13 @@ impl ThreadPool {
             return Err(PoolCreationError::InvalidLimit);
         }
         
+        let mut threads = Vec::with_capacity(limit);
 
+        for i in 0..limit {
+            threads.push(Worker::new(i));
+        }
 
-        Ok(ThreadPool)
+        Ok(ThreadPool{ threads })
     }
 
     pub fn execute<F>(&self, f: F) 
@@ -36,3 +52,11 @@ impl ThreadPool {
             
         }
 }
+
+
+
+#[derive(Debug)]
+pub enum PoolCreationError {
+    InvalidLimit
+}
+
