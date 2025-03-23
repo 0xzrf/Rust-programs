@@ -2,7 +2,7 @@ mod commands;
 pub use commands::*;
 use std::io::{self, Write};
 
-pub fn run() {
+pub fn run() -> Result<(), &'static str> {
     loop {
         // Uncomment this block to pass the first stage s
         print!("$ ");
@@ -15,7 +15,8 @@ pub fn run() {
 
         match *&input[..].trim() {
             "exit 0" => SystemConfig::exit(0),
-            input if input.starts_with("echo") => SystemExecutables::echo(input),
+            input if input.starts_with("echo") => SystemExecutables::echo(input)?,
+            input if input.starts_with("type") => SystemExecutables::handle_type(input)?,
             _ =>  SystemConfig::invalid_command(&input[..].trim()),
         }
 
