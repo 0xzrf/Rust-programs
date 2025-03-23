@@ -18,10 +18,11 @@ pub fn run() -> Result<(), &'static str> {
             input if input.starts_with("echo") => SystemExecutables::echo(input)?,
             input if input.starts_with("type") => SystemExecutables::handle_type(input)?,
             _ =>  {
-                SystemConfig::invalid_command(&input[..].trim());
-                continue;
+                match SystemConfig::invalid_command(&input[..].trim()) {
+                    Ok(_) => continue,
+                    Err(_) => println!("{}: command not found", &input[..].trim().split(" ").next().unwrap())
+                }
             },
         }
-
     }
 }

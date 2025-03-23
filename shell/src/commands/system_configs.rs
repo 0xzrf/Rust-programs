@@ -4,15 +4,22 @@ use std::process::Command;
 pub struct SystemConfig;
 
 impl SystemConfig {
-    pub fn invalid_command(cmd: &str)  {
+    pub fn invalid_command(cmd: &str) -> Result<(), ()>  {
         let mut v = cmd.split(" ");
 
-        let mut child = Command::new(v.next().unwrap())
+        let mut child = match Command::new(v.next().unwrap())
         .args(v)
-        .spawn()
-        .map_err(|err| println!("{}", err.to_string()));
+        .spawn() {
+            Ok(val) => val,
+            Err(_) => {
+                return Err(());
+            }
+        };
 
-        child.wait().map_err(|err| err.to_string()).unwrap();
+        match child.wait() {
+            Ok(_) => return Ok(()),
+            Err(_) => return Err(())
+        };
     }
 
     pub fn exit(code: i32) {
