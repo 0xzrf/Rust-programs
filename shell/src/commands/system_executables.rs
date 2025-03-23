@@ -1,4 +1,6 @@
 use regex::Regex;
+use std::env;
+use pathsearch::find_executable_in_path;
 
 pub struct SystemExecutables;
 
@@ -20,10 +22,51 @@ impl SystemExecutables {
     } 
 
     pub fn handle_type(exp: &str) -> Result<(), &'static str> {
-        let re = Regex::new(r"^echo\s+(.*)").unwrap();
+        let built_in = ["type", "exit", "echo"];
+        let valid_cmds = ["valid_command"];
 
+        let re = match Regex::new(r"^type\s+(.*)") {
+            Ok(val) => val,
+            Err(_) => {
+                println!("Couldn't extract val");
+                return Err("Unable extract val");
+            }
+        };
 
-        
+        if let Some(mat) = re.captures(exp) {
+
+            let val = mat.get(1).map_or("", |m| m.as_str());
+            if built_in.contains(&val) {
+
+                println!("{val} is a shell builtin");
+
+            } else if let Some(path) = find_executable_in_path(val) {
+                println!("{val} is {}", path.to_str().unwrap())
+            }
+            
+            else if valid_cmds.contains(&val)  {
+
+                let path = env::var("PATH").unwrap(); // We can unwrap since PATH env. variable is always set
+
+                let mut dir = "";
+                if path.contains(":") {
+                    let mut directories = path.split(":");
+
+                    dir = directories.next().unwrap();
+                } else {
+                    dir = &path[..]
+                }
+
+                println!("{val} is {dir}");
+            }
+            else {
+                println!("{val}: not found");
+            }
+        }
+
         Ok(())
     }
+
+    
+
 }
