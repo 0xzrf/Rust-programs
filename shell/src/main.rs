@@ -1,6 +1,11 @@
 #[allow(unused_imports)]
 use std::{io::{self, Write}, process};
 
+use codecrafters_shell::{
+    SystemConfig,
+    SystemExecutables
+};
+
 fn main() {
     loop {
         // Uncomment this block to pass the first stage s
@@ -13,9 +18,11 @@ fn main() {
         stdin.read_line(&mut input).unwrap();
 
         match *&input[..].trim() {
-            "exit 0" => process::exit(0),
-            _ =>  println!("{}: command not found", input.trim())
+            "exit 0" => SystemConfig::exit(0),
+            input if input.starts_with("echo") => SystemExecutables::echo(input),
+            _ =>  SystemConfig::invalid_command(&input[..].trim()),
         }
+
 
 
     }
