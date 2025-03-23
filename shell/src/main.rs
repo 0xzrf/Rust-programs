@@ -3,7 +3,7 @@ use std::{io::{self, Write}, process};
 
 fn main() {
     loop {
-        // Uncomment this block to pass the first stage
+        // Uncomment this block to pass the first stage s
         print!("$ ");
         io::stdout().flush().unwrap();
 
