@@ -1,5 +1,6 @@
 use regex::Regex;
 use std::env;
+
 use pathsearch::find_executable_in_path;
 
 pub struct SystemExecutables;
@@ -22,7 +23,7 @@ impl SystemExecutables {
     } 
 
     pub fn handle_type(exp: &str) -> Result<(), &'static str> {
-        let built_in = ["type", "exit", "echo"];
+        let built_in = ["type", "exit", "echo", "pwd"];
         let valid_cmds = ["valid_command"];
 
         let re = match Regex::new(r"^type\s+(.*)") {
@@ -62,6 +63,17 @@ impl SystemExecutables {
             else {
                 println!("{val}: not found");
             }
+        }
+
+        Ok(())
+    }
+
+
+    pub fn handle_pwd() -> Result<(), &'static str> {
+
+        match env::current_dir() {
+            Ok(path) => println!("{}", path.display()),
+            Err(_) => return Err("Unable to find path")
         }
 
         Ok(())

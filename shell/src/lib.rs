@@ -17,6 +17,7 @@ pub fn run() -> Result<(), &'static str> {
             "exit 0" => SystemConfig::exit(0),
             input if input.starts_with("echo") => SystemExecutables::echo(input)?,
             input if input.starts_with("type") => SystemExecutables::handle_type(input)?,
+            input if input.starts_with("pwd") => SystemExecutables::handle_pwd()?,
             _ =>  {
                 match SystemConfig::invalid_command(&input[..].trim()) {
                     Ok(_) => continue,
