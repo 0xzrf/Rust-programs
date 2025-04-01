@@ -7,12 +7,9 @@ pub struct SystemExecutables;
 
 impl SystemExecutables {
     pub fn echo(exp: &str) -> Result<(), &'static str> {
-        // Compile the regular expression pattern to match "echo " followed by any characters
         let re = Regex::new(r"^echo\s+(.*)").unwrap();
 
-        // Search for a match in the input string slice
         if let Some(mat) = re.captures(exp) {
-            // Return the captured part after "echo "
             let val = mat.get(1).map_or("", |m| m.as_str());
 
             println!("{val}");
@@ -71,15 +68,29 @@ impl SystemExecutables {
     }
 
     pub fn handle_cd(exp: &str) -> Result<(), &'static str> {
-        // Compile the regular expression pattern to match "echo " followed by any characters
         let re = Regex::new(r"^cd\s+(.*)").unwrap();
 
         // Search for a match in the input string slice
         if let Some(mat) = re.captures(exp) {
-            // Return the captured part after "echo "
-            let val = mat.get(1).map_or("", |m| m.as_str());
+            let mut val = mat.get(1).map_or("", |m| m.as_str()).to_string();
+
+            if val.starts_with("~") {
+                println!("~ matched");
+
+                let val_cloned = val.clone();
+
+                let (_, remaining_dir) = val_cloned.split_at(1);
+
+                let mut user = "".to_string();
+                if let Ok(usr) = env::var("USER") {
+                    user = usr;
+                }
+
+                val = format!("/home/{}{}", user, remaining_dir);
+            }
+
             
-            if env::set_current_dir(val).is_err() {
+            if env::set_current_dir(&val).is_err() {
                 println!("cd: {val}: No such file or directory");
             }
 
