@@ -4,7 +4,7 @@ use std::process::Command;
 pub struct SystemConfig;
 
 impl SystemConfig {
-    pub fn invalid_command(cmd: &str) -> Result<(), ()>  {
+    pub fn execute_cmd(cmd: &str) -> Result<(), ()>  {
         let mut v = cmd.split(" ");
 
         let mut child = match Command::new(v.next().unwrap())
