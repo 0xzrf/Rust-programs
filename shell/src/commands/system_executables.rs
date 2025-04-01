@@ -61,7 +61,7 @@ impl SystemExecutables {
         Ok(())
     }
 
-    pub fn handle_pwd(current_path: &mut String) -> Result<(), &'static str> {
+    pub fn handle_pwd() -> Result<(), &'static str> {
         match env::current_dir() {
             Ok(path) => println!("{}", path.display()),
             Err(_) => return Err("Unable to find path"),
@@ -70,7 +70,7 @@ impl SystemExecutables {
         Ok(())
     }
 
-    pub fn handle_cd(exp: &str, current_path: &mut String) -> Result<(), &'static str> {
+    pub fn handle_cd(exp: &str) -> Result<(), &'static str> {
         // Compile the regular expression pattern to match "echo " followed by any characters
         let re = Regex::new(r"^cd\s+(.*)").unwrap();
 
@@ -78,23 +78,10 @@ impl SystemExecutables {
         if let Some(mat) = re.captures(exp) {
             // Return the captured part after "echo "
             let val = mat.get(1).map_or("", |m| m.as_str());
-
-            match env::current_exe() {
-                Ok(path) => println!("{}", path.display()),
-                Err(_) => println!(""),
-            }
             
-            match val {
-                // handle going to the parent directory
-                ".." => {
-                },
-                // handle going to the current directory
-                "." => {
-
-                },
-                _ => {}
+            if env::set_current_dir(val).is_err() {
+                println!("cd: {val}: No such file or directory");
             }
-
 
             return Ok(());
         } else {
