@@ -75,18 +75,16 @@ impl SystemExecutables {
             let mut val = mat.get(1).map_or("", |m| m.as_str()).to_string();
 
             if val.starts_with("~") {
-                println!("~ matched");
-
                 let val_cloned = val.clone();
 
-                let (_, remaining_dir) = val_cloned.split_at(1);
+                let (_, remaining_dir) = val_cloned.split_at(1); // splitting right after ~ to get the remaining path
 
-                let mut user = "".to_string();
-                if let Ok(usr) = env::var("USER") {
-                    user = usr;
+                let mut home = "".to_string();
+                if let Ok(usr) = env::var("HOME") { // Getting the current user's name
+                    home = usr;
                 }
 
-                val = format!("/home/{}{}", user, remaining_dir);
+                val = format!("{home}{remaining_dir}");
             }
 
             
