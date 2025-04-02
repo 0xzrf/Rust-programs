@@ -1,6 +1,5 @@
-use regex::Regex;
-use std::{env, fs};
 use crate::helper_functions::*;
+use std::{env, fs};
 
 use pathsearch::find_executable_in_path;
 
@@ -17,7 +16,6 @@ impl SystemExecutables {
         }
 
         println!("{args}");
-
         Ok(())
     }
 
@@ -25,36 +23,26 @@ impl SystemExecutables {
         let built_in = ["type", "exit", "echo", "pwd", "cd"];
         let valid_cmds = ["valid_command"];
 
-        let re = match Regex::new(r"^type\s+(.*)") {
-            Ok(val) => val,
-            Err(_) => {
-                println!("Couldn't extract val");
-                return Err("Unable extract val");
-            }
-        };
+        let val = extract_regex_val(r"^type\s+(.*)", exp)?;
+        if built_in.contains(&val) {
+            println!("{val} is a shell builtin");
+        } else if let Some(path) = find_executable_in_path(val) {
+            println!("{val} is {}", path.to_str().unwrap())
+        } else if valid_cmds.contains(&val) {
+            let path = env::var("PATH").unwrap(); // We can unwrap since PATH env. variable is always set
 
-        if let Some(mat) = re.captures(exp) {
-            let val = mat.get(1).map_or("", |m| m.as_str());
-            if built_in.contains(&val) {
-                println!("{val} is a shell builtin");
-            } else if let Some(path) = find_executable_in_path(val) {
-                println!("{val} is {}", path.to_str().unwrap())
-            } else if valid_cmds.contains(&val) {
-                let path = env::var("PATH").unwrap(); // We can unwrap since PATH env. variable is always set
+            let mut dir = "";
+            if path.contains(":") {
+                let mut directories = path.split(":");
 
-                let mut dir = "";
-                if path.contains(":") {
-                    let mut directories = path.split(":");
-
-                    dir = directories.next().unwrap();
-                } else {
-                    dir = &path[..]
-                }
-
-                println!("{val} is {dir}");
+                dir = directories.next().unwrap();
             } else {
-                println!("{val}: not found");
+                dir = &path[..]
             }
+
+            println!("{val} is {dir}");
+        } else {
+            println!("{val}: not found");
         }
 
         Ok(())
@@ -70,60 +58,45 @@ impl SystemExecutables {
     }
 
     pub fn handle_cd(exp: &str) -> Res<()> {
-        let re = Regex::new(r"^cd\s+(.*)").unwrap();
+        let mut val = extract_regex_val(r"^cd\s+(.*)", exp)?.to_string();
 
-        // Search for a match in the input string slice
-        if let Some(mat) = re.captures(exp) {
-            let mut val = mat.get(1).map_or("", |m| m.as_str()).to_string();
+        if val.starts_with("~") {
+            let val_cloned = val.clone();
 
-            if val.starts_with("~") {
-                let val_cloned = val.clone();
+            let (_, remaining_dir) = val_cloned.split_at(1); // splitting right after ~ to get the remaining path
 
-                let (_, remaining_dir) = val_cloned.split_at(1); // splitting right after ~ to get the remaining path
-
-                let mut home = "".to_string();
-                if let Ok(usr) = env::var("HOME") { // Getting the current user's name
-                    home = usr;
-                }
-
-                val = format!("{home}{remaining_dir}");
+            let mut home = "".to_string();
+            if let Ok(usr) = env::var("HOME") {
+                // Getting the current user's name
+                home = usr;
             }
-
-            
-            if env::set_current_dir(&val).is_err() {
-                println!("cd: {val}: No such file or directory");
-            }
-
-            return Ok(());
-        } else {
-            return Err("Unable to get the expression");
+            val = format!("{home}{remaining_dir}");
         }
+
+        if env::set_current_dir(&val).is_err() {
+            println!("cd: {val}: No such file or directory");
+        }
+        Ok(())
     }
     pub fn handle_cat(exp: &str) -> Res<()> {
-        let re = Regex::new(r"^cat\s+(.*)").unwrap();
+        let args = extract_regex_val(r"^cat\s+(.*)", exp)?;
 
-        if let Some(mat) = re.captures(exp) {
-            let val = mat.get(1).map_or("", |m| m.as_str()).to_string();
+        let mut args_iter = args.split(" ");
 
-            
-            let mut args = val.split(" ");
+        while let Some(path) = args_iter.next() {
+            let mut new_pattern = path;
 
-            while let Some(path) = args.next() {
-                let mut new_pattern = path; 
+            if path.starts_with("'") && path.ends_with("'") {
+                new_pattern = &path[1..path.len() - 1];
+            }
 
-                if path.starts_with("'") && path.ends_with("'") {
-                    new_pattern = &path[1..path.len() - 1];
-                }
-
-                if let Ok(output) = fs::read_to_string(new_pattern) {
-                    println!("{output}");
-                } else { 
-                    println!("cat: {path}: No such file or directory");
-                }
-            }  
-   
+            if let Ok(output) = fs::read_to_string(new_pattern) {
+                println!("{output}");
+            } else {
+                println!("cat: {path}: No such file or directory");
+            }
         }
 
-        Ok(()) 
+        Ok(())
     }
 }
