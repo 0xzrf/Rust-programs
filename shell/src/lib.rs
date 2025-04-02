@@ -18,6 +18,7 @@ pub fn run() -> Result<(), &'static str> {
             input if input.starts_with("type") => SystemExecutables::handle_type(input)?,
             input if input.starts_with("pwd") => SystemExecutables::handle_pwd()?,
             input if input.starts_with("cd") => SystemExecutables::handle_cd(input)?,
+            input if input.starts_with("cat") => SystemExecutables::handle_cat(input)?,
             _ =>  {
                 match SystemConfig::execute_cmd(&input[..].trim()) {
                     Ok(_) => continue,

@@ -1,16 +1,25 @@
 use regex::Regex;
-use std::env;
+use std::{env, fs};
 
 use pathsearch::find_executable_in_path;
+
+type Res<T> = Result<T, &'static str>; // Creating a generic type to remove repetitive return value
 
 pub struct SystemExecutables;
 
 impl SystemExecutables {
-    pub fn echo(exp: &str) -> Result<(), &'static str> {
+    pub fn echo(exp: &str) -> Res<()> {
         let re = Regex::new(r"^echo\s+(.*)").unwrap();
 
         if let Some(mat) = re.captures(exp) {
-            let val = mat.get(1).map_or("", |m| m.as_str());
+            let mut val = mat.get(1).map_or("", |m| m.as_str());
+
+            // additional logic to handle single quotes in the argument
+            if val.starts_with("'") && val.ends_with("'") {
+                val = &val[1..val.len() - 1];
+            } else {
+
+            }
 
             println!("{val}");
             return Ok(());
@@ -19,7 +28,7 @@ impl SystemExecutables {
         }
     }
 
-    pub fn handle_type(exp: &str) -> Result<(), &'static str> {
+    pub fn handle_type(exp: &str) -> Res<()> {
         let built_in = ["type", "exit", "echo", "pwd", "cd"];
         let valid_cmds = ["valid_command"];
 
@@ -58,7 +67,7 @@ impl SystemExecutables {
         Ok(())
     }
 
-    pub fn handle_pwd() -> Result<(), &'static str> {
+    pub fn handle_pwd() -> Res<()> {
         match env::current_dir() {
             Ok(path) => println!("{}", path.display()),
             Err(_) => return Err("Unable to find path"),
@@ -67,7 +76,7 @@ impl SystemExecutables {
         Ok(())
     }
 
-    pub fn handle_cd(exp: &str) -> Result<(), &'static str> {
+    pub fn handle_cd(exp: &str) -> Res<()> {
         let re = Regex::new(r"^cd\s+(.*)").unwrap();
 
         // Search for a match in the input string slice
@@ -96,6 +105,38 @@ impl SystemExecutables {
         } else {
             return Err("Unable to get the expression");
         }
-
     }
+    pub fn handle_cat(exp: &str) -> Res<()> {
+        let re = Regex::new(r"^cat\s+(.*)").unwrap();
+
+        if let Some(mat) = re.captures(exp) {
+            let val = mat.get(1).map_or("", |m| m.as_str()).to_string();
+
+            
+            let mut args = val.split(" ");
+
+            while let Some(path) = args.next() {
+                let mut new_pattern = path; 
+
+                if path.starts_with("'") && path.ends_with("'") {
+                    new_pattern = &path[1..path.len() - 1];
+                }
+
+                if let Ok(output) = fs::read_to_string(new_pattern) {
+                    println!("{output}");
+                } else { 
+                    println!("cat: {path}: No such file or directory");
+                }
+            }  
+   
+        }
+
+        Ok(()) 
+    }
+
+
+    fn extract_regex_val(exp: &str) -> Res<String>{
+        Ok(String::from(""))
+    }
+
 }
