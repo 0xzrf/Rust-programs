@@ -9,23 +9,15 @@ pub struct SystemExecutables;
 
 impl SystemExecutables {
     pub fn echo(exp: &str) -> Res<()> {
-        let re = Regex::new(r"^echo\s+(.*)").unwrap();
+        let mut args = SystemExecutables::extract_regex_val(r"^echo\s+(.*)", exp)?;
 
-        if let Some(mat) = re.captures(exp) {
-            let mut val = mat.get(1).map_or("", |m| m.as_str());
-
-            // additional logic to handle single quotes in the argument
-            if val.starts_with("'") && val.ends_with("'") {
-                val = &val[1..val.len() - 1];
-            } else {
-
-            }
-
-            println!("{val}");
-            return Ok(());
-        } else {
-            return Err("Unable to get the expression");
+        if args.starts_with("'") && args.ends_with("'") {
+            args = &args[1..args.len() - 1];
         }
+
+        println!("{args}");
+
+        Ok(())
     }
 
     pub fn handle_type(exp: &str) -> Res<()> {
@@ -135,8 +127,16 @@ impl SystemExecutables {
     }
 
 
-    fn extract_regex_val(exp: &str) -> Res<String>{
-        Ok(String::from(""))
+    fn extract_regex_val<'a>(exp: &'a str, from: &'a str) -> Res<&'a str>{
+        let re = Regex::new(exp).unwrap();
+
+        if let Some(mat) = re.captures(from) {
+            let val = mat.get(1).map_or("", |m| m.as_str());
+
+            return Ok(val);
+        } else {
+            return Err("Unable to get the expression");
+        }
     }
 
 }
