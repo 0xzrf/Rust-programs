@@ -1,5 +1,6 @@
 use regex::Regex;
 use std::{env, fs};
+use crate::helper_functions::*;
 
 use pathsearch::find_executable_in_path;
 
@@ -9,7 +10,7 @@ pub struct SystemExecutables;
 
 impl SystemExecutables {
     pub fn echo(exp: &str) -> Res<()> {
-        let mut args = SystemExecutables::extract_regex_val(r"^echo\s+(.*)", exp)?;
+        let mut args = extract_regex_val(r"^echo\s+(.*)", exp)?;
 
         if args.starts_with("'") && args.ends_with("'") {
             args = &args[1..args.len() - 1];
@@ -125,18 +126,4 @@ impl SystemExecutables {
 
         Ok(()) 
     }
-
-
-    fn extract_regex_val<'a>(exp: &'a str, from: &'a str) -> Res<&'a str>{
-        let re = Regex::new(exp).unwrap();
-
-        if let Some(mat) = re.captures(from) {
-            let val = mat.get(1).map_or("", |m| m.as_str());
-
-            return Ok(val);
-        } else {
-            return Err("Unable to get the expression");
-        }
-    }
-
 }

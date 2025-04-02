@@ -1,5 +1,8 @@
 mod commands;
 pub use commands::*;
+mod helper_functions;
+pub use helper_functions::*;
+
 use std::io::{self, Write};
 
 pub fn run() -> Result<(), &'static str> {
