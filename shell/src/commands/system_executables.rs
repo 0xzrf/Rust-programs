@@ -20,7 +20,7 @@ impl SystemExecutables {
     }
 
     pub fn echo(&self) -> Res<()> {
-        // let parsed = SystemExecutables::parse_shell_like_args(&self.args); // Parsing the argument to eventually show in the terminal
+        let parsed = parse_shell_like_args(&self.args); // Parsing the argument to eventually show in the terminal
 
         println!("{}", self.args);
         Ok(())
@@ -88,7 +88,7 @@ impl SystemExecutables {
     }
 
     pub fn handle_cat(&self) -> Res<()> {
-        let file_paths = SystemExecutables::parse_shell_like_args(&self.args);
+        let file_paths = parse_shell_like_args(&self.args);
         
         for path in file_paths {
             if let Ok(output) = fs::read_to_string(&path) {
@@ -99,42 +99,5 @@ impl SystemExecutables {
         }
     
         Ok(())
-    }
-    
-
-    fn parse_shell_like_args(input: &str) -> Vec<String> {
-        let mut tokens = Vec::new();
-        let mut current = String::new();
-        let mut chars = input.chars().peekable();
-        let mut in_single_quote = false;
-    
-        while let Some(c) = chars.next() {
-            match c {
-                '\'' => {
-                    // Toggle single quote mode
-                    if in_single_quote {
-                        in_single_quote = false;
-                    } else {
-                        in_single_quote = true;
-                    }
-                }
-                ' ' | '\t' if !in_single_quote => {
-                    if !current.is_empty() {
-                        tokens.push(current.clone());
-                        current.clear();
-                    }
-                    // skip the space
-                }
-                _ => {
-                    current.push(c);
-                }
-            }
-        }
-    
-        if !current.is_empty() {
-            tokens.push(current);
-        }
-    
-        tokens
     }
 }
