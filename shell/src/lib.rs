@@ -26,12 +26,7 @@ pub fn run() -> Result<(), &'static str> {
             "pwd" => system_cmd.handle_pwd()?,
             "cd" => system_cmd.handle_cd()?,
             "cat" => system_cmd.handle_cat()?,
-            _ =>  {
-                match SystemConfig::execute_cmd(&input[..].trim()) {
-                    Ok(_) => continue,
-                    Err(_) => println!("{}: command not found", &input[..].trim().split(" ").next().unwrap())
-                }
-            },
+            _ =>  if let Err(_) = SystemConfig::execute_cmd(&input[..].trim()) {println!("{cmd}: commmand not found")},
         }
     }
 }
