@@ -5,11 +5,25 @@ use pathsearch::find_executable_in_path;
 
 type Res<T> = Result<T, &'static str>; // Creating a generic type to remove repetitive return value
 
-pub struct SystemExecutables;
+pub struct SystemExecutables {
+    pub cmd: String,
+    pub args: String
+}
 
 impl SystemExecutables {
+
+    /// @exp is the intire input of the command(eg. echo hello world)
+    /// @cmd_exp is how the build function will extracts the args from the input variable
+    pub fn build(cmd_exp: String, exp: &str) -> Self {
+        let args = extract_args_from_cmd(&cmd_exp, exp).unwrap().to_string();
+
+        let cmd = exp.split(" ").next().unwrap().to_string();
+
+        SystemExecutables { cmd, args }
+    }
+
     pub fn echo(exp: &str) -> Res<()> {
-        let mut args = extract_args_from_cmd(r"^echo\s+(.*)", exp)?.to_string();
+        let args = extract_args_from_cmd(r"^echo\s+(.*)", exp)?.to_string();
 
         let parsed = SystemExecutables::parse_shell_like_args(&args);
 
