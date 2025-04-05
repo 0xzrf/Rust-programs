@@ -55,51 +55,51 @@ impl SystemExecutables {
         Ok(())
     }
 
-    // pub fn handle_pwd() -> Res<()> {
-    //     match env::current_dir() {
-    //         Ok(path) => println!("{}", path.display()),
-    //         Err(_) => return Err("Unable to find path"),
-    //     }
+    pub fn handle_pwd(&self) -> Res<()> {
+        match env::current_dir() {
+            Ok(path) => println!("{}", path.display()),
+            Err(_) => return Err("Unable to find path"),
+        }
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
-    // pub fn handle_cd(exp: &str) -> Res<()> {
-    //     let mut val = extract_args_from_cmd(r"^cd\s+(.*)", exp)?.to_string();
+    pub fn handle_cd(&self) -> Res<()> {
 
-    //     if val.starts_with("~") {
-    //         let val_cloned = val.clone();
+        let mut args = self.args.clone();
 
-    //         let (_, remaining_dir) = val_cloned.split_at(1); // splitting right after ~ to get the remaining path
+        if self.args.starts_with("~") {
+            let val_cloned = args.clone();
 
-    //         let mut home = "".to_string();
-    //         if let Ok(usr) = env::var("HOME") {
-    //             // Getting the current user's name
-    //             home = usr;
-    //         }
-    //         val = format!("{home}{remaining_dir}");
-    //     }
+            let (_, remaining_dir) = val_cloned.split_at(1); // splitting right after ~ to get the remaining path
 
-    //     if env::set_current_dir(&val).is_err() {
-    //         println!("cd: {val}: No such file or directory");
-    //     }
-    //     Ok(())
-    // }
+            let mut home = "".to_string();
+            if let Ok(usr) = env::var("HOME") {
+                // Getting the current user's name
+                home = usr;
+            }
+            args = format!("{home}{remaining_dir}");
+        }
 
-    // pub fn handle_cat(exp: &str) -> Res<()> {
-    //     let args = extract_args_from_cmd(r"^cat\s+(.*)", exp)?;
-    //     let file_paths = SystemExecutables::parse_shell_like_args(args);
+        if env::set_current_dir(&args).is_err() {
+            println!("cd: {args}: No such file or directory");
+        }
+        Ok(())
+    }
+
+    pub fn handle_cat(&self) -> Res<()> {
+        let file_paths = SystemExecutables::parse_shell_like_args(&self.args);
+        
+        for path in file_paths {
+            if let Ok(output) = fs::read_to_string(&path) {
+                println!("{output}");
+            } else {
+                println!("cat: {path}: No such file or directory");
+            }
+        }
     
-    //     for path in file_paths {
-    //         if let Ok(output) = fs::read_to_string(&path) {
-    //             println!("{output}");
-    //         } else {
-    //             println!("cat: {path}: No such file or directory");
-    //         }
-    //     }
-    
-    //     Ok(())
-    // }
+        Ok(())
+    }
     
 
     fn parse_shell_like_args(input: &str) -> Vec<String> {

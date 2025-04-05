@@ -15,17 +15,17 @@ pub fn run() -> Result<(), &'static str> {
         let mut input = String::new();
         stdin.read_line(&mut input).unwrap();
 
-        let (cmd, args) = input.split_once(" ").unwrap();
-
-        let system_cmd = SystemExecutables::build(cmd, &args[..args.len() - 1]);
+        let input = input.trim();
+        let (cmd, args) = input.split_once(" ").unwrap_or((input, ""));
+        let system_cmd = SystemExecutables::build(cmd.trim(), args.trim());
 
         match cmd {
             "exit 0" => SystemConfig::exit(0),
             "echo" => system_cmd.echo()?,
             "type" => system_cmd.handle_type()?,
-            // input if input.starts_with("pwd") => SystemExecutables::handle_pwd()?,
-            // input if input.starts_with("cd") => SystemExecutables::handle_cd(input)?,
-            // input if input.starts_with("cat") => SystemExecutables::handle_cat(input)?,
+            "pwd" => system_cmd.handle_pwd()?,
+            "cd" => system_cmd.handle_cd()?,
+            "cat" => system_cmd.handle_cat()?,
             _ =>  {
                 match SystemConfig::execute_cmd(&input[..].trim()) {
                     Ok(_) => continue,
