@@ -9,13 +9,11 @@ pub struct SystemExecutables;
 
 impl SystemExecutables {
     pub fn echo(exp: &str) -> Res<()> {
-        let mut args = extract_regex_val(r"^echo\s+(.*)", exp)?;
+        let mut args = extract_args_from_cmd(r"^echo\s+(.*)", exp)?.to_string();
 
-        if args.starts_with("'") && args.ends_with("'") {
-            args = &args[1..args.len() - 1];
-        }
+        let parsed = SystemExecutables::parse_shell_like_args(&args);
 
-        println!("{args}");
+        println!("{}", parsed.join(" "));
         Ok(())
     }
 
@@ -23,7 +21,7 @@ impl SystemExecutables {
         let built_in = ["type", "exit", "echo", "pwd", "cd"];
         let valid_cmds = ["valid_command"];
 
-        let val = extract_regex_val(r"^type\s+(.*)", exp)?;
+        let val = extract_args_from_cmd(r"^type\s+(.*)", exp)?;
         if built_in.contains(&val) {
             println!("{val} is a shell builtin");
         } else if let Some(path) = find_executable_in_path(val) {
@@ -58,7 +56,7 @@ impl SystemExecutables {
     }
 
     pub fn handle_cd(exp: &str) -> Res<()> {
-        let mut val = extract_regex_val(r"^cd\s+(.*)", exp)?.to_string();
+        let mut val = extract_args_from_cmd(r"^cd\s+(.*)", exp)?.to_string();
 
         if val.starts_with("~") {
             let val_cloned = val.clone();
@@ -78,25 +76,56 @@ impl SystemExecutables {
         }
         Ok(())
     }
+
     pub fn handle_cat(exp: &str) -> Res<()> {
-        let args = extract_regex_val(r"^cat\s+(.*)", exp)?;
-
-        let mut args_iter = args.split(" ");
-
-        while let Some(path) = args_iter.next() {
-            let mut new_pattern = path;
-
-            if path.starts_with("'") && path.ends_with("'") {
-                new_pattern = &path[1..path.len() - 1];
-            }
-
-            if let Ok(output) = fs::read_to_string(new_pattern) {
+        let args = extract_args_from_cmd(r"^cat\s+(.*)", exp)?;
+        let file_paths = SystemExecutables::parse_shell_like_args(args);
+    
+        for path in file_paths {
+            if let Ok(output) = fs::read_to_string(&path) {
                 println!("{output}");
             } else {
                 println!("cat: {path}: No such file or directory");
             }
         }
-
+    
         Ok(())
+    }
+    
+
+    fn parse_shell_like_args(input: &str) -> Vec<String> {
+        let mut tokens = Vec::new();
+        let mut current = String::new();
+        let mut chars = input.chars().peekable();
+        let mut in_single_quote = false;
+    
+        while let Some(c) = chars.next() {
+            match c {
+                '\'' => {
+                    // Toggle single quote mode
+                    if in_single_quote {
+                        in_single_quote = false;
+                    } else {
+                        in_single_quote = true;
+                    }
+                }
+                ' ' | '\t' if !in_single_quote => {
+                    if !current.is_empty() {
+                        tokens.push(current.clone());
+                        current.clear();
+                    }
+                    // skip the space
+                }
+                _ => {
+                    current.push(c);
+                }
+            }
+        }
+    
+        if !current.is_empty() {
+            tokens.push(current);
+        }
+    
+        tokens
     }
 }
