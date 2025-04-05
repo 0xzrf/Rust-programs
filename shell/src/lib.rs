@@ -17,15 +17,12 @@ pub fn run() -> Result<(), &'static str> {
 
         let (cmd, args) = input.split_once(" ").unwrap();
 
-        let system_cmd = SystemExecutables {
-            cmd: cmd.to_string(),
-            args: args.to_string()
-        };
+        let system_cmd = SystemExecutables::build(cmd, &args[..args.len() - 1]);
 
         match cmd {
             "exit 0" => SystemConfig::exit(0),
             "echo" => system_cmd.echo()?,
-            // input if input.starts_with("type") => SystemExecutables::handle_type(input)?,
+            "type" => system_cmd.handle_type()?,
             // input if input.starts_with("pwd") => SystemExecutables::handle_pwd()?,
             // input if input.starts_with("cd") => SystemExecutables::handle_cd(input)?,
             // input if input.starts_with("cat") => SystemExecutables::handle_cat(input)?,

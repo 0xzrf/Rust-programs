@@ -6,47 +6,54 @@ use pathsearch::find_executable_in_path;
 type Res<T> = Result<T, &'static str>; // Creating a generic type to remove repetitive return value
 
 pub struct SystemExecutables {
-    pub cmd: String,
-    pub args: String
+    cmd: String,
+    args: String
 }
 
 impl SystemExecutables {
 
-    pub fn echo(&self) -> Res<()> {
-        let parsed = SystemExecutables::parse_shell_like_args(&self.args); // Parsing the argument to eventually show in the terminal
 
-        println!("{}", parsed.join(" "));
+    /// Using a build function from start is always better then manual build since you can always add constraints to it
+    /// like in this case, I can validate whether the cmd was a valid command or not and then print an error if it was not
+    pub fn build(cmd: &str, args: &str) -> Self {
+        SystemExecutables { cmd:  cmd.to_string(), args: args.to_string() }
+    }
+
+    pub fn echo(&self) -> Res<()> {
+        // let parsed = SystemExecutables::parse_shell_like_args(&self.args); // Parsing the argument to eventually show in the terminal
+
+        println!("{}", self.args);
         Ok(())
     }
 
-    // pub fn handle_type(exp: &str) -> Res<()> {
-    //     let built_in = ["type", "exit", "echo", "pwd", "cd"];
-    //     let valid_cmds = ["valid_command"];
+    pub fn handle_type(&self) -> Res<()> {
+        let built_in = ["type", "exit", "echo", "pwd", "cd"]; 
+        let valid_cmds = ["valid_command"];
+        let args = &self.args;
 
-    //     let val = extract_args_from_cmd(r"^type\s+(.*)", exp)?;
-    //     if built_in.contains(&val) {
-    //         println!("{val} is a shell builtin");
-    //     } else if let Some(path) = find_executable_in_path(val) {
-    //         println!("{val} is {}", path.to_str().unwrap())
-    //     } else if valid_cmds.contains(&val) {
-    //         let path = env::var("PATH").unwrap(); // We can unwrap since PATH env. variable is always set
+        if built_in.contains(&&args[..]) {
+            println!("{} is a shell builtin",args);
+        } else if let Some(path) = find_executable_in_path(&args) {
+            println!("{args} is {}", path.to_str().unwrap())
+        } else if valid_cmds.contains(&&args[..]) {
+            let path = env::var("PATH").unwrap(); // We can unwrap since PATH env. variable is always set
 
-    //         let mut dir = "";
-    //         if path.contains(":") {
-    //             let mut directories = path.split(":");
+            let mut dir = "";
+            if path.contains(":") {
+                let mut directories = path.split(":");
 
-    //             dir = directories.next().unwrap();
-    //         } else {
-    //             dir = &path[..]
-    //         }
+                dir = directories.next().unwrap();
+            } else {
+                dir = &path[..]
+            }
 
-    //         println!("{val} is {dir}");
-    //     } else {
-    //         println!("{val}: not found");
-    //     }
+            println!("{args} is {dir}");
+        } else {
+            println!("{args}: not found");
+        }
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
     // pub fn handle_pwd() -> Res<()> {
     //     match env::current_dir() {
