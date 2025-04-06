@@ -5,14 +5,34 @@ pub fn parse_shell_like_args(input: &str) -> Vec<String> {
     let mut current = String::new();
     let mut chars = input.chars().peekable();
     let mut in_single_quote = false;
+    let mut in_double_quote = false;
 
     while let Some(c) = chars.next() {
         match c {
-            '\'' => {
-                // Toggle quote state but don't add the quote itself
+            '\'' if !in_double_quote => {
                 in_single_quote = !in_single_quote;
             }
-            ' ' | '\t' if !in_single_quote => {
+            '"' if !in_single_quote => {
+                in_double_quote = !in_double_quote;
+            }
+            '\\' if in_double_quote => {
+                match chars.peek() {
+                    Some('"') | Some('\\') | Some('$') | Some('\n') => {
+                        // Consume the next char and push it literally
+                        current.push(chars.next().unwrap());
+                    }
+                    Some(other) => {
+                        // Leave the backslash and push as-is
+                        current.push('\\');
+                        current.push(*other);
+                        chars.next(); // consume the peeked char
+                    }
+                    None => {
+                        current.push('\\');
+                    }
+                }
+            }
+            ' ' | '\t' if !in_single_quote && !in_double_quote => {
                 if !current.is_empty() {
                     tokens.push(current.clone());
                     current.clear();
