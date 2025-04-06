@@ -22,7 +22,9 @@ impl SystemConfig {
         };
     }
 
-    pub fn exit(code: i32) {
-        process::exit(code);
+    pub fn exit(code: &str) {
+        if let Ok(val) = code.parse() {
+            process::exit(val); 
+        }
     }
 }

@@ -20,13 +20,13 @@ pub fn run() -> Result<(), &'static str> {
         let system_cmd = SystemExecutables::build(cmd.trim(), args.trim());
 
         match cmd {
-            "exit 0" => SystemConfig::exit(0),
+            "exit" => SystemConfig::exit(args),
             "echo" => system_cmd.echo()?,
             "type" => system_cmd.handle_type()?,
             "pwd" => system_cmd.handle_pwd()?,
             "cd" => system_cmd.handle_cd()?,
             "cat" => system_cmd.handle_cat()?,
-            _ =>  if let Err(_) = SystemConfig::execute_cmd(&input[..].trim()) {println!("{cmd}: commmand not found")},
+            _ =>  if let Err(_) = SystemConfig::execute_cmd(&input[..].trim()) {println!("{cmd}: command not found")},
         }
     }
 }

@@ -9,19 +9,14 @@ pub fn parse_shell_like_args(input: &str) -> Vec<String> {
     while let Some(c) = chars.next() {
         match c {
             '\'' => {
-                // Toggle single quote mode
-                if in_single_quote {
-                    in_single_quote = false;
-                } else {
-                    in_single_quote = true;
-                }
+                // Toggle quote state but don't add the quote itself
+                in_single_quote = !in_single_quote;
             }
             ' ' | '\t' if !in_single_quote => {
                 if !current.is_empty() {
                     tokens.push(current.clone());
                     current.clear();
                 }
-                // skip the space
             }
             _ => {
                 current.push(c);
@@ -35,6 +30,7 @@ pub fn parse_shell_like_args(input: &str) -> Vec<String> {
 
     tokens
 }
+
 
 /// This function replaces multiple whitespaces between words in a string to only one whitespace between them
 pub fn normalize_whitespace(input: &str) -> String {

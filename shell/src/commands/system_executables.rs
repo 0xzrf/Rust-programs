@@ -6,23 +6,21 @@ use pathsearch::find_executable_in_path;
 type Res<T> = Result<T, &'static str>; // Creating a generic type to remove repetitive return value
 
 pub struct SystemExecutables {
-    cmd: String,
+    _cmd: String,
     args: String
 }
 
 impl SystemExecutables {
-
-
     /// Using a build function from start is always better then manual build since you can always add constraints to it
     /// like in this case, I can validate whether the cmd was a valid command or not and then print an error if it was not
     pub fn build(cmd: &str, args: &str) -> Self {
-        SystemExecutables { cmd:  cmd.to_string(), args: args.to_string() }
+        SystemExecutables { _cmd:  cmd.to_string(), args: args.to_string() }
     }
 
     pub fn echo(&self) -> Res<()> {
         let parsed = parse_shell_like_args(&self.args); // Parsing the argument to eventually show in the terminal
 
-        println!("{}", self.args);
+        println!("{}", parsed.join(" "));
         Ok(())
     }
 
@@ -47,7 +45,7 @@ impl SystemExecutables {
                 dir = &path[..]
             }
 
-            println!("{args} is {dir}");
+            println!("{args} is {}", dir);
         } else {
             println!("{args}: not found");
         }
@@ -92,7 +90,7 @@ impl SystemExecutables {
         
         for path in file_paths {
             if let Ok(output) = fs::read_to_string(&path) {
-                println!("{output}");
+                print!("{output}");
             } else {
                 println!("cat: {path}: No such file or directory");
             }
