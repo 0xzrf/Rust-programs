@@ -15,21 +15,33 @@ pub fn parse_shell_like_args(input: &str) -> Vec<String> {
             '"' if !in_single_quote => {
                 in_double_quote = !in_double_quote;
             }
-            '\\' if in_double_quote => {
-                match chars.peek() {
-                    Some('"') | Some('\\') | Some('$') | Some('\n') => {
-                        // Consume the next char and push it literally
-                        current.push(chars.next().unwrap());
+            '\\' => {
+                if in_double_quote {
+                    match chars.peek() {
+                        Some('"') | Some('\\') | Some('$') | Some('\n') => {
+                            // Consume the next char and push it literally
+                            current.push(chars.next().unwrap());
+                        }
+                        Some(other) => {
+                            // Leave the backslash and push as-is
+                            current.push('\\');
+                            current.push(*other);
+                            chars.next(); // consume the peeked char
+                        }
+                        None => {
+                            current.push('\\');
+                        }
                     }
-                    Some(other) => {
-                        // Leave the backslash and push as-is
+                } else if !in_single_quote {
+                    // Outside quotes, backslash preserves the next character
+                    if let Some(next_char) = chars.next() {
+                        current.push(next_char);
+                    } else {
                         current.push('\\');
-                        current.push(*other);
-                        chars.next(); // consume the peeked char
                     }
-                    None => {
-                        current.push('\\');
-                    }
+                } else {
+                    // Inside single quotes, backslash has no special meaning
+                    current.push('\\');
                 }
             }
             ' ' | '\t' if !in_single_quote && !in_double_quote => {
