@@ -9,6 +9,7 @@ fn main() {
         Err(err) => {
             eprint!("{err}");
             process::exit(1);
+            
         }
     }
 }

@@ -86,16 +86,33 @@ impl SystemExecutables {
     }
 
     pub fn handle_cat(&self) -> Res<()> {
-        let file_paths = parse_shell_like_args(&self.args);
-        
+        let file_paths : Vec<String> = parse_shell_like_args(&self.args);
+        let mut redirect: bool = false;
+        let mut content: Vec<String> = vec![];
+
         for path in file_paths {
+            if path == ">".to_string() {
+                redirect = true;
+                continue
+            }
+
+            if redirect == true {
+                if let Err(_) = fs::write(&path, content.join("")) {
+                    return Err("Unable to write")
+                }
+            }
+
             if let Ok(output) = fs::read_to_string(&path) {
-                print!("{output}");
+                content.push(output);
             } else {
                 println!("cat: {path}: No such file or directory");
             }
         }
     
+        if !redirect {
+            println!("{}", content.join(""));
+        }
+
         Ok(())
     }
 }
