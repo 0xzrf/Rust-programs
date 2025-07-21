@@ -1,5 +1,9 @@
-fn main() {
-    println!("Hello, world!");
-}
+use axum::{routing::get, Router};
 
-ubn
+pub mod routes;
+
+pub use routes::root::hello_world;
+
+fn main() {
+    let router = Router::<&str>::new().route("/", get(hello_world));
+}
