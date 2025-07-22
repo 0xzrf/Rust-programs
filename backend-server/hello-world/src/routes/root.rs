@@ -1,24 +1,17 @@
-use axum::{
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    routing::get,
-    Json, Router,
-};
+use super::{ReturnVal, RootPostBody};
+use axum::Json;
 
-pub enum ReturnVal {
-    GET(String),
-    Error,
-}
-
-impl IntoResponse for ReturnVal {
-    fn into_response(self) -> Response {
-        match self {
-            ReturnVal::GET(data) => (StatusCode::OK, Json(data)).into_response(),
-            ReturnVal::Error => (StatusCode::NOT_FOUND).into_response(),
-        }
-    }
-}
-
+// returns hello world when sending a get request in /
 pub async fn hello_world() -> ReturnVal {
     ReturnVal::GET(String::from("Hello world"))
+}
+
+// Returns the same message as whatever sent in the msg of the body
+#[axum::debug_handler]
+pub async fn print_msg(Json(data): Json<RootPostBody>) -> ReturnVal {
+    let message_to_print = data.msg;
+
+    // println!("Message sent by the user::: {}", message_to_print);
+
+    ReturnVal::GET(message_to_print)
 }
