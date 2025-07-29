@@ -23,7 +23,7 @@ pub async fn print_query_msg(Path((msg, another_message)): Path<(String, String)
     let msg = &msg[..];
     let another_message = &another_message[..];
 
-    let total_str = format!("{}{}", msg, another_message);
+    let total_str = format!("{} {}", msg, another_message);
 
     ReturnVal::GET(total_str)
 }
