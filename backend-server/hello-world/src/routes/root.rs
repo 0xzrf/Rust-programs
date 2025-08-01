@@ -3,6 +3,7 @@ use axum::{extract::Path, Json};
 
 // returns hello world when sending a get request in /
 pub async fn hello_world() -> ReturnVal {
+    println!("Ran the get request at /");
     ReturnVal::GET(String::from("Hello world"))
 }
 
