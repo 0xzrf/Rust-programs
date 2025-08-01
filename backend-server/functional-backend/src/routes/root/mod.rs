@@ -1,5 +1,5 @@
-pub mod configs;
-pub mod logic;
+pub mod root_configs;
+pub mod root_logic;
 
-pub use configs::*;
-pub use logic::*;
+pub use root_configs::*;
+pub use root_logic::*;
