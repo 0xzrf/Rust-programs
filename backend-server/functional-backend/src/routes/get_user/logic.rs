@@ -1,4 +1,4 @@
-use axum::{extract::State, routing::post, Json, Router};
+use axum::{extract::State, Json};
 use sqlx::PgPool;
 
 use super::configs::{GetUserData, GetUserPostData, GetUserReturnVal};

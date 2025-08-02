@@ -1,6 +1,5 @@
 use super::configs::{CreateUserPostBody, PostReturnVal};
-use axum::{extract::State, routing::post, Json, Router};
-use dotenvy::dotenv;
+use axum::{extract::State, Json};
 use sqlx::PgPool;
 
 pub async fn set_user_logic(
