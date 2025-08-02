@@ -1,10 +1,9 @@
 use super::configs::{CreateUserPostBody, PostReturnVal};
-use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
+use axum::{extract::State, routing::post, Json, Router};
 use dotenvy::dotenv;
 use sqlx::PgPool;
-use std::env;
 
-async fn set_user_logic(
+pub async fn set_user_logic(
     State(pool): State<PgPool>,
     Json(data): Json<CreateUserPostBody>,
 ) -> PostReturnVal {
@@ -23,10 +22,4 @@ async fn set_user_logic(
             PostReturnVal::DBERROR(String::from("Internal server error"))
         }
     }
-}
-
-pub fn set_user_router() -> Router {
-    dotenv().ok();
-
-    Router::new().route("/create-user", post(set_user_logic))
 }
