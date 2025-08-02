@@ -1,11 +1,9 @@
-use std::sync::Arc;
-
 use axum::{
     routing::{get, post},
     Router,
 };
 pub mod routes;
-use routes::{create_contact, create_user, get_contacts, get_user, root};
+use routes::{create_contact, create_user, get_contact, get_contacts, get_user, root};
 use sqlx::PgPool;
 
 #[tokio::main]
@@ -27,6 +25,7 @@ async fn main() {
             "/get-contacts",
             post(get_contacts::logic::get_contacts_logic),
         )
+        .route("/get-contact", post(get_contact::logic::get_contacts_logic))
         .with_state(pool);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("Listening on {}", listener.local_addr().unwrap());
