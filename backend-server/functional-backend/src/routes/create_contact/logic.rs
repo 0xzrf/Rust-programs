@@ -1,4 +1,5 @@
 use super::configs::*;
+use crate::routes::helper::verify_user;
 use axum::extract::State;
 use sqlx::{types::Json, PgPool};
 
@@ -6,22 +7,17 @@ pub async fn create_contact_logic(
     State(pool): State<PgPool>,
     Json(data): Json<CreateContactBody>,
 ) -> CreateContactResponseStatus {
-    let result = sqlx::query!("SELECT * FROM users WHERE password = $1", data.password)
-        .fetch_one(&pool)
-        .await;
+    let verified = verify_user(State(pool.clone()), data.password).await;
 
-    let db_return_data;
-    // Throw a DB error if the query wasn't successful
-    match result {
-        Result::Ok(record) => db_return_data = record,
-        Result::Err(_) => return CreateContactResponseStatus::UNAUTHORIZED,
+    if verified.is_err() {
+        return CreateContactResponseStatus::UNAUTHORIZED;
     }
 
     let result = sqlx::query!(
         "INSERT INTO contacts (email, phone, username) VALUES ($1, $2, $3)",
         data.email,
         data.phone,
-        db_return_data.username
+        verified.unwrap().username
     )
     .execute(&pool)
     .await;
