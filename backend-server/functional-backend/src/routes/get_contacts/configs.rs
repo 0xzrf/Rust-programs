@@ -2,25 +2,24 @@ use axum::{http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
-pub struct CreateContactBody {
-    pub email: String,
-    pub phone: String,
+pub struct GetContactsBody {
     pub password: String,
 }
 
 #[derive(Serialize)]
-pub struct CreateContactResponse {
+pub struct GetContactsResponse {
     pub success: bool,
     pub msg: String,
+    pub contacts: Vec<String>,
 }
 
-pub enum CreateContactResponseStatus {
-    POST(CreateContactResponse), // The string passed will be the success message
+pub enum GetContactsResponseStatus {
+    POST(GetContactsResponse), // The string passed will be the success message
     UNAUTHORIZED,
     DBERROR(String),
 }
 
-impl IntoResponse for CreateContactResponseStatus {
+impl IntoResponse for GetContactsResponseStatus {
     fn into_response(self) -> axum::response::Response {
         match self {
             Self::POST(data) => (StatusCode::ACCEPTED, Json(data)).into_response(),
