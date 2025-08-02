@@ -5,9 +5,9 @@ pub struct UserData {
     pub username: String,
     pub pwd: String,
 }
-pub async fn verify_user(State(pool): State<PgPool>, pwd: String) -> Result<UserData, ()> {
+pub async fn verify_user(State(pool): State<&PgPool>, pwd: &String) -> Result<UserData, ()> {
     let result = sqlx::query!("SELECT * FROM users WHERE password = $1", pwd)
-        .fetch_one(&pool)
+        .fetch_one(pool)
         .await;
 
     // Throw a DB error if the query wasn't successful

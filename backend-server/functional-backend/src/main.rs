@@ -5,7 +5,7 @@ use axum::{
     Router,
 };
 pub mod routes;
-use routes::{create_contact, create_user, get_user, root};
+use routes::{create_contact, create_user, get_contacts, get_user, root};
 use sqlx::PgPool;
 
 #[tokio::main]
@@ -19,6 +19,14 @@ async fn main() {
         .route("/", get(root::root_logic::return_hello_world))
         .route("/create-user", post(create_user::logic::set_user_logic))
         .route("/get-user", post(get_user::logic::get_user_logic))
+        .route(
+            "/create-contact",
+            post(create_contact::logic::create_contact_logic),
+        )
+        .route(
+            "/get-contacts",
+            post(get_contacts::logic::get_contacts_logic),
+        )
         .with_state(pool);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("Listening on {}", listener.local_addr().unwrap());

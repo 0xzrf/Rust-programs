@@ -7,10 +7,16 @@ pub struct GetContactsBody {
 }
 
 #[derive(Serialize)]
+pub struct UserContact {
+    pub email: String,
+    pub phone: String,
+}
+
+#[derive(Serialize)]
 pub struct GetContactsResponse {
     pub success: bool,
     pub msg: String,
-    pub contacts: Vec<String>,
+    pub contacts: Vec<UserContact>,
 }
 
 pub enum GetContactsResponseStatus {

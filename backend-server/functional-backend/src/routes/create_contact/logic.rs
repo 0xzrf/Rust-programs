@@ -1,13 +1,14 @@
 use super::configs::*;
 use crate::routes::helper::verify_user;
-use axum::extract::State;
-use sqlx::{types::Json, PgPool};
+use axum::{extract::State, Json};
+use sqlx::PgPool;
 
+#[axum::debug_handler]
 pub async fn create_contact_logic(
     State(pool): State<PgPool>,
     Json(data): Json<CreateContactBody>,
 ) -> CreateContactResponseStatus {
-    let verified = verify_user(State(pool.clone()), data.password).await;
+    let verified = verify_user(State(&pool), &data.password).await;
 
     if verified.is_err() {
         return CreateContactResponseStatus::UNAUTHORIZED;
