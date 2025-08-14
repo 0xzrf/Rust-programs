@@ -36,7 +36,7 @@ impl ThreadPool {
     {
         let job = Box::new(f);
 
-        self.sender.send(job).unwrap();
+        self.sender.send(job).expect("Couldn't send the job");
     }
 
     pub fn run_thread_pooling(&self, stream: TcpStream) {
@@ -54,11 +54,17 @@ struct Worker {
 impl Worker {
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
         let handle = thread::spawn(move || {
-            let job = receiver.lock().expect("Failed to unlock").recv().unwrap();
+            loop {
+                let job = receiver
+                    .lock()
+                    .expect("Failed to unlock")
+                    .recv()
+                    .expect("Couldn't receive");
 
-            println!("Worker {id} got a job. executing....");
+                println!("Worker {id} got a job. executing....");
 
-            job();
+                job();
+            }
         });
 
         Worker { id, thread: handle }
