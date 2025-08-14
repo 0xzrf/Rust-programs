@@ -4,7 +4,18 @@ use std::{net::TcpStream, sync::mpsc, thread};
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
-    sender: mpsc::Sender<Job>,
+    sender: Option<mpsc::Sender<Job>>,
+}
+
+impl Drop for ThreadPool {
+    fn drop(&mut self) {
+        drop(self.sender.take());
+        for worker in &mut self.workers.drain(..) {
+            println!("Stopping worker {}", worker.id);
+
+            worker.thread.join().unwrap();
+        }
+    }
 }
 
 impl ThreadPool {
@@ -27,7 +38,10 @@ impl ThreadPool {
             workers.push(worker);
         }
 
-        ThreadPool { workers, sender }
+        ThreadPool {
+            workers,
+            sender: Some(sender),
+        }
     }
 
     pub fn execute<F>(&self, f: F)
@@ -36,7 +50,11 @@ impl ThreadPool {
     {
         let job = Box::new(f);
 
-        self.sender.send(job).expect("Couldn't send the job");
+        self.sender
+            .as_ref()
+            .unwrap()
+            .send(job)
+            .expect("Couldn't send the job");
     }
 
     pub fn run_thread_pooling(&self, stream: TcpStream) {
@@ -55,15 +73,17 @@ impl Worker {
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
         let handle = thread::spawn(move || {
             loop {
-                let job = receiver
-                    .lock()
-                    .expect("Failed to unlock")
-                    .recv()
-                    .expect("Couldn't receive");
+                match receiver.lock().expect("Failed to unlock").recv() {
+                    Ok(job) => {
+                        println!("Worker {id} got a job. executing....");
 
-                println!("Worker {id} got a job. executing....");
-
-                job();
+                        job();
+                    }
+                    Err(_) => {
+                        println!("Worker Id {id} is disconnected, shutting down");
+                        break;
+                    }
+                }
             }
         });
 
