@@ -1,8 +1,10 @@
 use crate::handle_connection;
-use std::{net::TcpStream, thread};
+use std::sync::{Arc, Mutex};
+use std::{net::TcpStream, sync::mpsc, thread};
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
+    sender: mpsc::Sender<Job>,
 }
 
 impl ThreadPool {
@@ -14,21 +16,27 @@ impl ThreadPool {
     pub fn new(size: usize) -> Self {
         assert!(size > 0);
 
+        let (sender, receiver) = mpsc::channel();
+
         let mut workers = Vec::with_capacity(size);
 
+        let recv = Arc::new(Mutex::new(receiver));
         for i in 0..size {
             // This should be fine because we're not expected to give a huge number for thread size
-            let worker = Worker::new(i);
+            let worker = Worker::new(i, Arc::clone(&recv));
             workers.push(worker);
         }
 
-        ThreadPool { workers }
+        ThreadPool { workers, sender }
     }
 
     pub fn execute<F>(&self, f: F)
     where
         F: FnOnce() + Send + 'static,
     {
+        let job = Box::new(f);
+
+        self.sender.send(job).unwrap();
     }
 
     pub fn run_thread_pooling(&self, stream: TcpStream) {
@@ -44,9 +52,17 @@ struct Worker {
 }
 
 impl Worker {
-    fn new(id: usize) -> Worker {
-        let handle = thread::spawn(|| {});
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
+        let handle = thread::spawn(move || {
+            let job = receiver.lock().expect("Failed to unlock").recv().unwrap();
+
+            println!("Worker {id} got a job. executing....");
+
+            job();
+        });
 
         Worker { id, thread: handle }
     }
 }
+
+type Job = Box<dyn FnOnce() + Send + 'static>;
