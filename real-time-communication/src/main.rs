@@ -1,3 +1,5 @@
+use real_time_communication::run;
+
 fn main() {
-    println!("Hello, world!");
+    let result = run();
 }
