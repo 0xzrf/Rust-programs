@@ -1,3 +1,4 @@
+mod communication;
 mod errors;
 mod user_onboard;
 

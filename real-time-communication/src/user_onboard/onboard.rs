@@ -1,6 +1,5 @@
 use std::io::{self, Write};
 
-/// Prints a colorful welcome message for the terminal chat application
 pub fn print_welcome_message() {
     // ANSI color codes
     const RESET: &str = "\x1b[0m";
@@ -8,7 +7,6 @@ pub fn print_welcome_message() {
     const CYAN: &str = "\x1b[36m";
     const YELLOW: &str = "\x1b[33m";
     const GREEN: &str = "\x1b[32m";
-    const BLUE: &str = "\x1b[34m";
     const MAGENTA: &str = "\x1b[35m";
     const DIM: &str = "\x1b[2m";
 
@@ -17,92 +15,69 @@ pub fn print_welcome_message() {
 
     let welcome_art = format!(
         r#"
-{}{}╔═════════════════════════════════════════════════════════════════════════╗
+{BOLD}{CYAN}╔═════════════════════════════════════════════════════════════════════════╗
 ║                                                                         ║
-║  {}████████╗███████╗██████╗ ███╗   ███╗ ██████╗██╗  ██╗ █████╗ ████████╗{}  ║
-║  {}╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██╔════╝██║  ██║██╔══██╗╚══██╔══╝{}  ║
-║  {}   ██║   █████╗  ██████╔╝██╔████╔██║██║     ███████║███████║   ██║   {}  ║
-║  {}   ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║██║     ██╔══██║██╔══██║   ██║   {}  ║
-║  {}   ██║   ███████╗██║  ██║██║ ╚═╝ ██║╚██████╗██║  ██║██║  ██║   ██║   {}  ║
-║  {}   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   {}  ║
+║  {YELLOW}████████╗███████╗██████╗ ███╗   ███╗ ██████╗██╗  ██╗ █████╗ ████████╗{CYAN}  ║
+║  {YELLOW}╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██╔════╝██║  ██║██╔══██╗╚══██╔══╝{CYAN}  ║
+║  {YELLOW}   ██║   █████╗  ██████╔╝██╔████╔██║██║     ███████║███████║   ██║   {CYAN}  ║
+║  {YELLOW}   ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║██║     ██╔══██║██╔══██║   ██║   {CYAN}  ║
+║  {YELLOW}   ██║   ███████╗██║  ██║██║ ╚═╝ ██║╚██████╗██║  ██║██║  ██║   ██║   {CYAN}  ║
+║  {YELLOW}   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   {CYAN}  ║
 ║                                                                         ║
-║  {}Welcome to TermChat - Your Terminal Chat Experience!{}                   ║
+║  {GREEN}Welcome to TermChat - Your Terminal Chat Experience!{CYAN}                   ║
 ║                                                                         ║
-╚═════════════════════════════════════════════════════════════════════════╝{}"#,
-        BOLD,
-        CYAN,
-        YELLOW,
-        CYAN,
-        YELLOW,
-        CYAN,
-        YELLOW,
-        CYAN,
-        YELLOW,
-        CYAN,
-        YELLOW,
-        CYAN,
-        YELLOW,
-        CYAN,
-        GREEN,
-        CYAN,
-        RESET
+╚═════════════════════════════════════════════════════════════════════════╝{RESET}"#
     );
 
-    println!("{}", welcome_art);
+    println!("{welcome_art}");
 
     // Feature highlights
-    println!("{}{}🚀 Features:{}", BOLD, MAGENTA, RESET);
-    println!("{}   • Join multiple chat rooms simultaneously", GREEN);
+    println!("{BOLD}{MAGENTA}🚀 Features:{RESET}");
+    println!("{GREEN}   • Join multiple chat rooms simultaneously",);
     println!("   • Real-time messaging with other users");
     println!("   • Create rooms");
     println!("   • Simple command-based interface");
-    println!("   • Cross-platform terminal support{}", RESET);
+    println!("   • Cross-platform terminal support{RESET}");
+
+    print_help();
 
     println!();
-    println!("{}{}📋 Quick Commands:{}", BOLD, BLUE, RESET);
-    println!("{}   /join <room>     - Join a chat room", YELLOW);
-    println!("   /create <room>   - Create a new room");
+    println!("{BOLD}{CYAN}💡 Tips:{RESET}");
+    println!("{DIM}   • Type your message and press Enter to send",);
     println!(
-        "   /set_user        - Set the username(default to terminal user){}",
-        RESET
+        "{DIM}   • if you want to write commands while in a room, write a messages starting with /",
     );
-    println!("   /list            - List available rooms");
-    println!("   /users           - Show users in current room");
-    println!("   /leave           - Leave current room");
-    println!("   /help            - Show all commands");
-    println!("   /quit            - Exit the application{}", RESET);
-
-    println!();
-    println!("{}{}💡 Tips:{}", BOLD, CYAN, RESET);
-    println!("{}   • Type your message and press Enter to send", DIM);
+    println!("{DIM}   • eg. /leave in the chat pannel will make you leave the room",);
     println!(
-        "{}   • if you want to write commands while in a room, write a messages starting with /",
-        DIM
-    );
-    println!(
-        "{}   • eg. /leave in the chat pannel will make you leave the room",
-        DIM
-    );
-    println!(
-        "{}   • If you want to write a message that starts with /(donno why), just write // instead(I'll handle the rest😉)",
-        DIM
+        "{DIM}   • If you want to write a message that starts with /(donno why), just write // instead(I'll handle the rest😉)",
     );
 
     println!();
     println!(
-        "{}{}═══════════════════════════════════════════════════════════════════{}",
-        BOLD, CYAN, RESET
+        "{BOLD}{CYAN}═══════════════════════════════════════════════════════════════════{RESET}"
     );
     println!(
-        "{}Ready to chat? Start by typing {} /join <room_name> {} or {} /create <room_name>{}",
-        GREEN, YELLOW, GREEN, YELLOW, RESET
+        "{GREEN}Ready to chat? Start by typing {YELLOW} /join <room_number> {GREEN} or {YELLOW} /create{RESET}"
     );
-    println!(
-        "{}═══════════════════════════════════════════════════════════════════{}",
-        CYAN, RESET
-    );
+    println!("{CYAN}═══════════════════════════════════════════════════════════════════{RESET}");
     println!();
 
     // Flush stdout to ensure everything is displayed
     io::stdout().flush().unwrap();
+}
+
+pub fn print_help() {
+    const BOLD: &str = "\x1b[1m";
+    const YELLOW: &str = "\x1b[33m";
+    const RESET: &str = "\x1b[0m";
+    const BLUE: &str = "\x1b[34m";
+
+    println!("{BOLD}{BLUE}📋 Quick Commands:{RESET}");
+    println!("{YELLOW}   /join <room>     - Join a chat room");
+    println!("   /create <room>   - Create a new room");
+    println!("   /set_user        - Set the username(default to terminal user){RESET}");
+    // println!("   /list            - List available rooms");
+    println!("   /leave           - Leave current room");
+    println!("   /help            - Show all commands");
+    println!("   /quit            - Exit the application{RESET}");
 }
