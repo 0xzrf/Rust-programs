@@ -1,3 +1,4 @@
+use super::structs::*;
 use crate::{
     errors::{CreateErrors, JoinErrors, OnboardErrors},
     user_onboard::print_help,
@@ -5,13 +6,17 @@ use crate::{
 use std::{
     env,
     io::{self, Write},
+    sync::{Arc, RwLock},
 };
 
-pub struct Communication;
+pub struct Communication {
+    pub rooms: SharedServer,
+}
 
 impl Communication {
     pub fn build() -> Self {
-        Communication
+        let rooms = Arc::new(RwLock::new(None));
+        Communication { rooms }
     }
 
     /// This is the place that will handle continuousely asking user for the command they want to use
