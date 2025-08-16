@@ -4,10 +4,12 @@ use crate::{
     user_onboard::print_help,
 };
 use std::{
+    collections::HashMap,
     env,
     io::{self, Write},
     sync::{Arc, RwLock},
 };
+use tokio::net::{TcpListener, TcpStream};
 
 pub struct Communication {
     pub rooms: SharedServer,
@@ -15,14 +17,18 @@ pub struct Communication {
 
 impl Communication {
     pub fn build() -> Self {
-        let rooms = Arc::new(RwLock::new(None));
+        let rooms = Arc::new(RwLock::new(ServerState {
+            rooms: HashMap::new(),
+        }));
         Communication { rooms }
     }
 
     /// This is the place that will handle continuousely asking user for the command they want to use
     /// It requres no arguments, but has the possibility of erroring out
-    pub fn user_response_onboarding(&self) -> Result<(), OnboardErrors> {
+    pub async fn user_response_onboarding(&self) -> Result<(), OnboardErrors> {
         let mut user_name = env::var("USER").unwrap();
+
+        let listener = TcpListener::bind("127.0.0.1:8000").await.unwrap();
 
         loop {
             print!("┌─[{user_name}]─]\n└─▶ ");
@@ -37,7 +43,7 @@ impl Communication {
 
             // TODO: Create match arms for cases of error
             match cmd {
-                "/create" => Self::create_room(&user_name)?,
+                "/create" => self.create_room(&user_name, &listener).await?,
                 "/join" => Self::join_room(&user_name)?,
                 "/help" => {
                     print_help();
@@ -50,8 +56,20 @@ impl Communication {
         }
     }
 
-    fn create_room(username: &str) -> Result<(), CreateErrors> {
-        todo!()
+    async fn create_room(
+        &self,
+        username: &str,
+        listener: &TcpListener,
+    ) -> Result<(), CreateErrors> {
+        loop {
+            let (stream, _) = listener.accept().await.expect("Listener.accept fucked up");
+            let state = self.clone();
+            tokio::spawn(async move {
+                // if let Err(e) = handle_client(stream, state).await {
+                //     eprintln!("client error: {e:?}");
+                // }
+            });
+        }
     }
 
     fn join_room(username: &str) -> Result<(), JoinErrors> {
