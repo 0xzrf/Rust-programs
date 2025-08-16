@@ -1,2 +1,4 @@
 #[derive(Debug)]
-pub enum OnboardErrors {}
+pub enum OnboardErrors {
+    InvalidCommand(&'static str),
+}

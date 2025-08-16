@@ -6,6 +6,6 @@ pub use {communication::*, errors::MainErrors, user_onboard::print_welcome_messa
 
 pub fn run() -> Result<(), MainErrors> {
     print_welcome_message();
-    Communication::user_response_onboarding();
+    Communication::user_response_onboarding().unwrap();
     Ok(())
 }
