@@ -63,7 +63,7 @@ pub fn print_welcome_message() {
     println!();
 
     // Flush stdout to ensure everything is displayed
-    io::stdout().flush().unwrap();
+    // io::stdout().flush().unwrap();
 }
 
 pub fn print_help() {

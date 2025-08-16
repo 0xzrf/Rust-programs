@@ -1,16 +1,30 @@
 use crate::errors::OnboardErrors;
-use std::{env, io};
+use std::{
+    env,
+    io::{self, Write},
+};
 
-pub fn user_response_onboarding() -> Result<(), OnboardErrors> {
-    let user_name = env::var("USER").unwrap();
+pub struct Communication;
 
-    loop {
-        print!("$ {user_name}");
+impl Communication {
+    pub fn user_response_onboarding() {
+        let user_name = env::var("USER").unwrap();
 
-        // Wait for user input
-        let stdin = io::stdin();
-        let mut input = String::new();
-        stdin.read_line(&mut input).unwrap();
+        loop {
+            print!("┌─[{user_name}]─]\n└─▶ ");
+            io::stdout().flush().unwrap(); // Force flush
+
+            // Wait for user input
+            let stdin = io::stdin();
+            let mut input = String::new();
+            stdin.read_line(&mut input).unwrap();
+
+            match &input[..] {
+                "/create" => {}
+                "/join" => {}
+                "/help" => {}
+                _ => {}
+            }
+        }
     }
-    Ok(())
 }
