@@ -1,4 +1,7 @@
-use crate::{errors::OnboardErrors, user_onboard::print_help};
+use crate::{
+    errors::{CreateErrors, JoinErrors, OnboardErrors},
+    user_onboard::print_help,
+};
 use std::{
     env,
     io::{self, Write},
@@ -7,7 +10,13 @@ use std::{
 pub struct Communication;
 
 impl Communication {
-    pub fn user_response_onboarding() -> Result<(), OnboardErrors> {
+    pub fn build() -> Self {
+        Communication
+    }
+
+    /// This is the place that will handle continuousely asking user for the command they want to use
+    /// It requres no arguments, but has the possibility of erroring out
+    pub fn user_response_onboarding(&self) -> Result<(), OnboardErrors> {
         let mut user_name = env::var("USER").unwrap();
 
         loop {
@@ -21,9 +30,10 @@ impl Communication {
             let input = input.trim();
             let (cmd, arg) = input.split_once(" ").unwrap_or((input, ""));
 
+            // TODO: Create match arms for cases of error
             match cmd {
-                "/create" => {}
-                "/join" => {}
+                "/create" => Self::create_room(&user_name)?,
+                "/join" => Self::join_room(&user_name)?,
                 "/help" => {
                     print_help();
                 }
@@ -33,5 +43,13 @@ impl Communication {
                 _ => println!("Invalid command"),
             }
         }
+    }
+
+    fn create_room(username: &str) -> Result<(), CreateErrors> {
+        todo!()
+    }
+
+    fn join_room(username: &str) -> Result<(), JoinErrors> {
+        todo!()
     }
 }

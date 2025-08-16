@@ -1,5 +1,3 @@
-use std::io::{self, Write};
-
 pub fn print_welcome_message() {
     // ANSI color codes
     const RESET: &str = "\x1b[0m";
