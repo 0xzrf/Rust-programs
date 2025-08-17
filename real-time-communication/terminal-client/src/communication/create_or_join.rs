@@ -1,34 +1,27 @@
-use super::structs::*;
 use crate::{
     errors::{CreateErrors, JoinErrors, OnboardErrors},
     user_onboard::print_help,
 };
-use std::{
-    collections::HashMap,
-    env,
-    io::{self, Write},
-    sync::{Arc, RwLock},
-};
+use std::io::{self, Write};
 
 pub struct Communication {
-    pub rooms: SharedServer,
+    pub user_name: String,
+    pub joined_room: Option<String>,
 }
 
 impl Communication {
-    pub fn build() -> Self {
-        let rooms = Arc::new(RwLock::new(ServerState {
-            rooms: HashMap::new(),
-        }));
-        Communication { rooms }
+    pub fn build(user_name: String) -> Self {
+        Communication {
+            user_name,
+            joined_room: None,
+        }
     }
 
     /// This is the place that will handle continuousely asking user for the command they want to use
     /// It requres no arguments, but has the possibility of erroring out
-    pub async fn user_response_onboarding(&self) -> Result<(), OnboardErrors> {
-        let mut user_name = env::var("USER").unwrap();
-
+    pub async fn user_response_onboarding(&mut self) -> Result<(), OnboardErrors> {
         loop {
-            print!("┌─[{user_name}]─]\n└─▶ ");
+            print!("┌─[{}]─]\n└─▶ ", self.user_name);
             io::stdout().flush().unwrap(); // Force flush
 
             // Wait for user input
@@ -38,26 +31,27 @@ impl Communication {
             let input = input.trim();
             let (cmd, arg) = input.split_once(" ").unwrap_or((input, ""));
 
-            // TODO: Create match arms for cases of error
             match cmd {
-                "/create" => self.create_room(&user_name).await?,
-                "/join" => Self::join_room(&user_name)?,
+                "/create" => self.create_room().await?,
+                "/join" => self.join_room()?,
                 "/help" => {
                     print_help();
                 }
                 "/set_user" => {
-                    user_name = arg.to_string();
+                    self.user_name = arg.to_string();
                 }
                 _ => println!("Invalid command"),
             }
         }
     }
 
-    async fn create_room(&self, username: &str) -> Result<(), CreateErrors> {
+    /// This function is used to join the room in the server
+    /// It will simply send some TCP requests to it and then start messaging it
+    async fn create_room(&self) -> Result<(), CreateErrors> {
         Ok(())
     }
 
-    fn join_room(username: &str) -> Result<(), JoinErrors> {
+    fn join_room(&self) -> Result<(), JoinErrors> {
         todo!()
     }
 }

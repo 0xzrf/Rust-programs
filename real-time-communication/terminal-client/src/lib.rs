@@ -7,9 +7,11 @@ pub use {communication::*, errors::MainErrors, user_onboard::print_welcome_messa
 
 pub fn run() -> Result<(), MainErrors> {
     print_welcome_message();
-    let communication = Communication::build();
+    let user_name = std::env::var("USER").unwrap();
 
-    block_on(communication.user_response_onboarding());
+    let mut communication = Communication::build(user_name);
+
+    block_on(communication.user_response_onboarding()).unwrap();
 
     Ok(())
 }
