@@ -1,5 +1,6 @@
 mod communication;
 mod errors;
+mod helper;
 mod user_onboard;
 
 use tokio::runtime::Runtime;

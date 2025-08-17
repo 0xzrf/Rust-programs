@@ -2,6 +2,7 @@ use crate::{
     errors::{CreateErrors, JoinErrors, OnboardErrors},
     user_onboard::print_help,
 };
+use futures::future::join;
 use std::{
     io::{self, Read, Write},
     net::TcpStream,
@@ -36,9 +37,11 @@ impl Communication {
             let input = input.trim();
             let (cmd, arg) = input.split_once(" ").unwrap_or((input, ""));
 
+            let stream = self.connect_server().unwrap();
+
             match cmd {
-                "/create" => self.create_room().await?,
-                "/join" => self.join_room()?,
+                "/create" => self.create_room(stream).await?,
+                "/join" => self.join_room(arg, stream).await?,
                 "/help" => {
                     print_help();
                 }
@@ -52,55 +55,76 @@ impl Communication {
 
     /// This function is used to join the room in the server
     /// It will simply send some TCP requests to it and then start messaging it
-    async fn create_room(&self) -> Result<(), CreateErrors> {
-        self.connect_server()
+    async fn create_room(&self, stream: TcpStream) -> Result<(), CreateErrors> {
+        // Wait for user input
+        println!("Input the room name:");
+        let stdin = io::stdin();
+        let mut input = String::new();
+        stdin.read_line(&mut input).unwrap();
+        let input = input.trim();
+
+        self.join_room(input, stream)
             .await
-            .expect("Couldn't connect to server");
-        Ok(())
+            .map_err(|_| CreateErrors::RoomNotCreated("Room not created"))
     }
 
-    fn join_room(&self) -> Result<(), JoinErrors> {
-        todo!()
-    }
+    async fn join_room(&self, room: &str, mut stream: TcpStream) -> Result<(), JoinErrors> {
+        let join_msg = format!(r#"{{"type":"JoinRoom","room":"{room}"}}\n"#);
+        let join_bfr = join_msg.as_bytes();
 
-    async fn connect_server(&self) -> Result<(), OnboardErrors> {
-        // Connect to the first nc listener (terminal 1)
-        if let Ok(mut stream) = TcpStream::connect("127.0.0.1:8080") {
-            let mut str_clone = stream.try_clone().unwrap();
-            let handle = tokio::task::spawn(async move {
-                loop {
-                    let mut buffer = [0; 512];
+        stream.write_all(join_bfr).expect("Couldn't send buffer");
+        stream.flush().unwrap();
 
-                    while let Ok(n) = stream.read(&mut buffer) {
-                        if n == 0 {
-                            println!("Closing connection");
-                            break; // connection closed
-                        }
-                        println!("Received: {}", String::from_utf8_lossy(&buffer[..n]));
-                        stream.flush().unwrap();
+        let mut str_clone = stream.try_clone().unwrap();
+
+        let read_task = tokio::task::spawn(async move {
+            loop {
+                let mut buffer = [0; 512];
+
+                while let Ok(n) = str_clone.read(&mut buffer) {
+                    if n == 0 {
+                        println!("Closing connection");
+                        break; // connection closed
                     }
+                    println!("Received: {}", String::from_utf8_lossy(&buffer[..n]));
+                    str_clone.flush().unwrap();
                 }
-            });
-
-            println!("Joining and sending");
-            let join_bfr = b"{\"type\":\"JoinRoom\",\"room\":\"lobby\"}\n";
-            let msg_bfr = b"{\"type\":\"Message\",\"room\":\"lobby\",\"from\":\"server\",\"text\":\"hello terminal 1\"}\n";
-
-            str_clone.write_all(join_bfr).expect("Couldn't send buffer");
-            str_clone.flush().unwrap();
-
-            for _ in 0..100 {
-                println!("Sending buffer");
-                str_clone.write_all(msg_bfr).expect("Couldn't send buffer");
-                str_clone.flush().unwrap();
-                sleep(Duration::from_secs(5)).await;
             }
+        });
+        let user_name = self.user_name.clone();
+        let room_write = String::from(room);
 
-            handle.await.unwrap();
-        } else {
-            eprintln!("Could not connect to listener 1");
-        }
+        let write_task = tokio::task::spawn(async move {
+            loop {
+                print!("$[{user_name}] ─▶");
+                io::stdout().flush().unwrap(); // Force flush
+                let stdin = io::stdin();
+                let mut raw_msg_to_send = String::new();
+                stdin.read_line(&mut raw_msg_to_send).unwrap();
+                let msg_to_send = raw_msg_to_send.trim();
+                let msg = format!(
+                    r#"{{"type":"Message","room":"{room_write}","from":"server","text":"{msg_to_send}"}}\n"#,
+                );
+
+                let msg_bfr = msg.as_bytes();
+
+                stream.write_all(msg_bfr).expect("Couldn't send buffer");
+                println!("Sending message");
+                stream.flush().unwrap();
+            }
+        });
+
+        join(read_task, write_task).await;
 
         Ok(())
+    }
+
+    fn connect_server(&self) -> Result<TcpStream, OnboardErrors> {
+        // Connect to the first nc listener (terminal 1)
+        if let Ok(stream) = TcpStream::connect("127.0.0.1:8080") {
+            return Ok(stream);
+        }
+        println!("Couldn't return");
+        Err(OnboardErrors::ServerError("Couldn't return"))
     }
 }
