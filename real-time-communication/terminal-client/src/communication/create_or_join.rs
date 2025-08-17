@@ -5,11 +5,10 @@ use crate::{
 use futures::future::join;
 use std::{
     io::{self, Read, Write},
-    net::TcpStream,
     time::Duration,
 };
-
-use tokio::time::sleep;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::{net::TcpStream, time::sleep};
 pub struct Communication {
     pub user_name: String,
     pub joined_room: Option<String>,
@@ -37,7 +36,7 @@ impl Communication {
             let input = input.trim();
             let (cmd, arg) = input.split_once(" ").unwrap_or((input, ""));
 
-            let stream = self.connect_server().unwrap();
+            let stream = self.connect_server().await.unwrap();
 
             match cmd {
                 "/create" => self.create_room(stream).await?,
@@ -69,48 +68,66 @@ impl Communication {
     }
 
     async fn join_room(&self, room: &str, mut stream: TcpStream) -> Result<(), JoinErrors> {
-        let join_msg = format!(r#"{{"type":"JoinRoom","room":"{room}"}}\n"#);
+        println!("Joining room");
+        let join_msg = format!(r#"{{"type":"JoinRoom","room":"{room}"}}{}"#, "\n");
         let join_bfr = join_msg.as_bytes();
 
-        stream.write_all(join_bfr).expect("Couldn't send buffer");
-        stream.flush().unwrap();
+        stream
+            .write_all(join_bfr)
+            .await
+            .expect("Couldn't send buffer");
+        stream.flush().await.unwrap();
 
-        let mut str_clone = stream.try_clone().unwrap();
+        let (reader, mut writer) = stream.into_split();
 
-        let read_task = tokio::task::spawn(async move {
-            loop {
-                let mut buffer = [0; 512];
-
-                while let Ok(n) = str_clone.read(&mut buffer) {
-                    if n == 0 {
-                        println!("Closing connection");
-                        break; // connection closed
-                    }
-                    println!("Received: {}", String::from_utf8_lossy(&buffer[..n]));
-                    str_clone.flush().unwrap();
-                }
-            }
-        });
         let user_name = self.user_name.clone();
         let room_write = String::from(room);
 
+        let read_task = tokio::task::spawn(async move {
+            let mut buf_reader = BufReader::new(reader);
+            let mut line = String::new();
+
+            loop {
+                line.clear();
+                match buf_reader.read_line(&mut line).await {
+                    Ok(0) => {
+                        println!("Connection closed by server");
+                        break;
+                    }
+                    Ok(_) => {
+                        println!("Received: {}", line.trim());
+                    }
+                    Err(e) => {
+                        eprintln!("Read error: {e}");
+                        break;
+                    }
+                }
+            }
+        });
         let write_task = tokio::task::spawn(async move {
             loop {
-                print!("$[{user_name}] ─▶");
+                print!("$ ");
                 io::stdout().flush().unwrap(); // Force flush
-                let stdin = io::stdin();
-                let mut raw_msg_to_send = String::new();
-                stdin.read_line(&mut raw_msg_to_send).unwrap();
-                let msg_to_send = raw_msg_to_send.trim();
-                let msg = format!(
-                    r#"{{"type":"Message","room":"{room_write}","from":"server","text":"{msg_to_send}"}}\n"#,
-                );
+                let stdin = tokio::io::stdin();
+                let mut reader = BufReader::new(stdin).lines();
 
-                let msg_bfr = msg.as_bytes();
+                while let Ok(Some(line)) = reader.next_line().await {
+                    let msg = format!(
+                        r#"{{"type":"Message","room":"{room_write}","from":"{user_name}","text":"{line}"}}{}"#,
+                        "\n"
+                    );
 
-                stream.write_all(msg_bfr).expect("Couldn't send buffer");
-                println!("Sending message");
-                stream.flush().unwrap();
+                    if let Err(e) = writer.write_all(msg.as_bytes()).await {
+                        eprintln!("Write error: {e}");
+                        break;
+                    }
+                    if let Err(e) = writer.flush().await {
+                        eprintln!("Flush error: {e}");
+                        break;
+                    }
+
+                    println!("Sent: {line}");
+                }
             }
         });
 
@@ -119,9 +136,9 @@ impl Communication {
         Ok(())
     }
 
-    fn connect_server(&self) -> Result<TcpStream, OnboardErrors> {
+    async fn connect_server(&self) -> Result<TcpStream, OnboardErrors> {
         // Connect to the first nc listener (terminal 1)
-        if let Ok(stream) = TcpStream::connect("127.0.0.1:8080") {
+        if let Ok(stream) = TcpStream::connect("127.0.0.1:8080").await {
             return Ok(stream);
         }
         println!("Couldn't return");
