@@ -65,11 +65,15 @@ impl Communication {
             let (stream, _) = listener.accept().await.expect("Listener.accept fucked up");
             let state = self.clone();
             tokio::spawn(async move {
-                // if let Err(e) = handle_client(stream, state).await {
-                //     eprintln!("client error: {e:?}");
-                // }
+                if let Err(e) = handle_client(stream, state).await {
+                    eprintln!("client error: {e:?}");
+                }
             });
         }
+    }
+
+    async fn handle_client(stream: TcpStream, state: SharedServer) -> Result<(), Error> {
+        todo!()
     }
 
     fn join_room(username: &str) -> Result<(), JoinErrors> {

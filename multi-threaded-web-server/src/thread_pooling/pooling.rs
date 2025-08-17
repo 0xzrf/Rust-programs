@@ -73,7 +73,7 @@ impl Worker {
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
         let handle = thread::spawn(move || {
             loop {
-                match receiver.lock().expect("Failed to unlock").recv() {
+                match receiver.lock().expect("Failed to get the lock").recv() {
                     Ok(job) => {
                         println!("Worker {id} got a job. executing....");
 
