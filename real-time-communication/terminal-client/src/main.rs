@@ -1,4 +1,4 @@
-use real_time_communication::run;
+use terminal_client::run;
 
 fn main() {
     run().unwrap();

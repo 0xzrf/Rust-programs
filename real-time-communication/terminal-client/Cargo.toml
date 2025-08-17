@@ -1,5 +1,5 @@
 [package]
-name = "real-time-communication"
+name = "terminal-client"
 version = "0.1.0"
 edition = "2024"
 

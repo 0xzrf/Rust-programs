@@ -9,7 +9,6 @@ use std::{
     io::{self, Write},
     sync::{Arc, RwLock},
 };
-use tokio::net::{TcpListener, TcpStream};
 
 pub struct Communication {
     pub rooms: SharedServer,
@@ -28,8 +27,6 @@ impl Communication {
     pub async fn user_response_onboarding(&self) -> Result<(), OnboardErrors> {
         let mut user_name = env::var("USER").unwrap();
 
-        let listener = TcpListener::bind("127.0.0.1:8000").await.unwrap();
-
         loop {
             print!("┌─[{user_name}]─]\n└─▶ ");
             io::stdout().flush().unwrap(); // Force flush
@@ -43,7 +40,7 @@ impl Communication {
 
             // TODO: Create match arms for cases of error
             match cmd {
-                "/create" => self.create_room(&user_name, &listener).await?,
+                "/create" => self.create_room(&user_name).await?,
                 "/join" => Self::join_room(&user_name)?,
                 "/help" => {
                     print_help();
@@ -56,24 +53,8 @@ impl Communication {
         }
     }
 
-    async fn create_room(
-        &self,
-        username: &str,
-        listener: &TcpListener,
-    ) -> Result<(), CreateErrors> {
-        loop {
-            let (stream, _) = listener.accept().await.expect("Listener.accept fucked up");
-            let state = self.clone();
-            tokio::spawn(async move {
-                if let Err(e) = handle_client(stream, state).await {
-                    eprintln!("client error: {e:?}");
-                }
-            });
-        }
-    }
-
-    async fn handle_client(stream: TcpStream, state: SharedServer) -> Result<(), Error> {
-        todo!()
+    async fn create_room(&self, username: &str) -> Result<(), CreateErrors> {
+        Ok(())
     }
 
     fn join_room(username: &str) -> Result<(), JoinErrors> {
