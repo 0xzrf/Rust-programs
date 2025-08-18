@@ -32,7 +32,8 @@ impl Communication {
     /// This is the place that will handle continuousely asking user for the command they want to use
     /// It requres no arguments, but has the possibility of erroring out
     pub async fn user_response_onboarding(&mut self) -> Result<(), OnboardErrors> {
-        loop {
+        let mut done = false;
+        while !done {
             print!("┌─[{}]─]\n└─▶ ", self.user_name);
             std_io::stdout().flush().unwrap(); // Force flush
 
@@ -54,9 +55,15 @@ impl Communication {
                 "/set_user" => {
                     self.user_name = arg.to_string();
                 }
+                "/quit" => {
+                    println!("Quiting app...");
+                    done = true;
+                    break;
+                }
                 _ => println!("Invalid command"),
             }
         }
+        Ok(())
     }
 
     /// This function is used to join the room in the server
