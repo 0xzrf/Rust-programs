@@ -1,7 +1,7 @@
 use crate::{
     communication::structs::Messages,
     errors::{CreateErrors, JoinErrors, OnboardErrors},
-    helper::print_right,
+    helper::{print_right, race},
     user_onboard::print_help,
 };
 
@@ -92,7 +92,6 @@ impl Communication {
         stream.flush().await.unwrap();
 
         let (reader, mut writer) = stream.into_split();
-        let (indicator, mut rec) = channel::<bool>();
 
         let (user_name, room_write) = (
             Arc::new(RwLock::new(self.user_name.clone())),
@@ -110,9 +109,6 @@ impl Communication {
             let mut line = String::new();
 
             loop {
-                if rec.recv().await.is_none() {
-                    break;
-                }
                 line.clear();
                 match buf_reader.read_line(&mut line).await {
                     Ok(0) => {
@@ -146,7 +142,6 @@ impl Communication {
         });
         let write_task = tokio::task::spawn(async move {
             loop {
-                // print prompt first
                 let user_name = username_clone_write.read().await;
                 println!("┌─[{user_name}]─]");
                 io::stdout().flush().await.unwrap();
@@ -162,7 +157,6 @@ impl Communication {
                 }
 
                 if line.trim().eq_ignore_ascii_case("/leave") {
-                    drop(indicator);
                     println!("Leaving room");
                     break;
                 }
@@ -189,7 +183,7 @@ impl Communication {
             }
         });
 
-        tokio::try_join!(read_task, write_task).unwrap();
+        race(read_task, write_task).await;
 
         Ok(())
     }
