@@ -4,10 +4,10 @@ mod helper;
 mod user_onboard;
 
 use tokio::runtime::Runtime;
-pub use {communication::*, errors::MainErrors, user_onboard::print_welcome_message};
+pub use {communication::*, errors::MainErrors, user_onboard::print_minimal_welcome};
 
 pub fn run() -> Result<(), MainErrors> {
-    print_welcome_message();
+    print_minimal_welcome();
     let user_name = std::env::var("USER").unwrap();
 
     let mut communication = Communication::build(user_name);

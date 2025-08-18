@@ -13,7 +13,7 @@ use std::{
 use tokio::{
     io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::TcpStream,
-    sync::{RwLock, mpsc::unbounded_channel as channel},
+    sync::RwLock,
 };
 
 pub struct Communication {

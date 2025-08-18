@@ -6,7 +6,6 @@ pub fn print_right(msg: &str) {
         let width = size.cols as usize;
         let msg_width = UnicodeWidthStr::width(msg); // correct display width
         if msg_width < width {
-            let padding = width - msg_width;
             print!("{:>width$}\r\n", msg, width = width);
         } else {
             println!("{msg}"); // fallback if msg too long
