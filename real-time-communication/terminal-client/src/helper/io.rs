@@ -1,16 +1,18 @@
 use std::io::{self, Write};
+use unicode_width::UnicodeWidthStr;
 
 pub fn print_right(msg: &str) {
     if let Some(size) = termsize::get() {
         let width = size.cols as usize;
-        let msg_len = msg.chars().count();
-        if msg_len < width {
+        let msg_width = UnicodeWidthStr::width(msg); // correct display width
+        if msg_width < width {
+            let padding = width - msg_width;
             print!("{:>width$}\r\n", msg, width = width);
         } else {
-            println!("{msg}"); // fallback if msg is too long
+            println!("{msg}"); // fallback if msg too long
         }
     } else {
-        println!("{msg}",); // fallback if we can't detect size
+        println!("{msg}"); // fallback if can't detect size
     }
     io::stdout().flush().unwrap();
 }

@@ -4,7 +4,7 @@ use crate::{
     helper::print_right,
     user_onboard::print_help,
 };
-use futures::future::join;
+
 use serde_json::json;
 use std::{
     io::{self as std_io, Write},
@@ -93,12 +93,16 @@ impl Communication {
 
         let (reader, mut writer) = stream.into_split();
 
-        let user_name = Arc::new(RwLock::new(self.user_name.clone()));
-        let room_write = Arc::new(RwLock::new(String::from(room)));
+        let (user_name, room_write) = (
+            Arc::new(RwLock::new(self.user_name.clone())),
+            Arc::new(RwLock::new(String::from(room))),
+        );
 
-        let username_clone_read = Arc::clone(&user_name);
-        let username_clone_write = Arc::clone(&user_name);
-        let room_write_clone = Arc::clone(&room_write);
+        let (username_clone_read, username_clone_write, room_write_clone) = (
+            Arc::clone(&user_name),
+            Arc::clone(&user_name),
+            Arc::clone(&room_write),
+        );
 
         let read_task = tokio::task::spawn(async move {
             let mut buf_reader = BufReader::new(reader);
@@ -115,7 +119,6 @@ impl Communication {
                         let msg: Messages = match serde_json::from_str(line.trim()) {
                             Ok(c) => c,
                             Err(_) => {
-                                // println!("Couldn't call line: {line}");
                                 continue;
                             }
                         };
@@ -176,7 +179,7 @@ impl Communication {
             }
         });
 
-        join(read_task, write_task).await;
+        tokio::try_join!(read_task, write_task).unwrap();
 
         Ok(())
     }
