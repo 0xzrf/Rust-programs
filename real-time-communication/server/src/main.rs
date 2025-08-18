@@ -58,9 +58,8 @@ async fn main() -> Result<(), Error> {
     println!("Server running on 127.0.0.1:8080");
 
     loop {
-        print!("┌─[]─]\n└─▶ ");
-
         let (stream, _) = listener.accept().await?;
+        println!("A new incoming ");
         let state = state.clone();
         tokio::spawn(async move {
             if let Err(e) = handle_client(stream, state).await {
@@ -81,6 +80,7 @@ async fn handle_client(stream: TcpStream, state: SharedState) -> Result<(), Erro
     tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             if let Ok(line) = serde_json::to_string(&msg) {
+                println!("Received message: {line}");
                 let _ = writer.write_all(line.as_bytes()).await;
                 let _ = writer.write_all(b"\n").await;
             }
@@ -94,8 +94,9 @@ async fn handle_client(stream: TcpStream, state: SharedState) -> Result<(), Erro
         let cmd: ClientCommand = match serde_json::from_str(&line) {
             Ok(c) => c,
             Err(_) => {
+                println!("Couldn't call line: {line}");
                 let _ = tx.send(ServerMessage::Error {
-                    msg: "invalid command".into(),
+                    msg: "invalid command: {}".into(),
                 });
                 continue;
             }
@@ -103,6 +104,7 @@ async fn handle_client(stream: TcpStream, state: SharedState) -> Result<(), Erro
 
         match cmd {
             ClientCommand::JoinRoom { room } => {
+                println!("Joining room: {room}");
                 let room_arc = {
                     let mut state_guard = state.write().await;
                     state_guard
@@ -120,6 +122,7 @@ async fn handle_client(stream: TcpStream, state: SharedState) -> Result<(), Erro
                 let _ = tx.send(ServerMessage::Joined { room });
             }
             ClientCommand::Message { room, text } => {
+                println!("Sending message to room: {room}");
                 let maybe_room = {
                     let state_guard = state.read().await;
                     state_guard.rooms.get(&room).cloned()
@@ -136,6 +139,7 @@ async fn handle_client(stream: TcpStream, state: SharedState) -> Result<(), Erro
                         }
                     }
                 } else {
+                    println!("Room doesn't exist");
                     let _ = tx.send(ServerMessage::Error {
                         msg: format!("room {room} does not exist"),
                     });
