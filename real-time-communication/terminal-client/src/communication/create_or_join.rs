@@ -13,7 +13,7 @@ use std::{
 use tokio::{
     io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::TcpStream,
-    sync::RwLock,
+    sync::{RwLock, mpsc::unbounded_channel as channel},
 };
 
 pub struct Communication {
@@ -92,6 +92,7 @@ impl Communication {
         stream.flush().await.unwrap();
 
         let (reader, mut writer) = stream.into_split();
+        let (indicator, mut rec) = channel::<bool>();
 
         let (user_name, room_write) = (
             Arc::new(RwLock::new(self.user_name.clone())),
@@ -109,6 +110,9 @@ impl Communication {
             let mut line = String::new();
 
             loop {
+                if rec.recv().await.is_none() {
+                    break;
+                }
                 line.clear();
                 match buf_reader.read_line(&mut line).await {
                     Ok(0) => {
@@ -155,6 +159,12 @@ impl Communication {
 
                 if bytes_read == 0 {
                     break; // EOF (Ctrl+D)
+                }
+
+                if line.trim().eq_ignore_ascii_case("/leave") {
+                    drop(indicator);
+                    println!("Leaving room");
+                    break;
                 }
 
                 let room_write = room_write_clone.read().await;
