@@ -1,2 +1,2 @@
 mod io;
-use io::*;
+pub use io::*;

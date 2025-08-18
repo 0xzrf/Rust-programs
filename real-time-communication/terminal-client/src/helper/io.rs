@@ -1,11 +1,16 @@
-// use crate::errors::OnboardErrors;
-// use std::io;
-// pub fn read_input_to_string(input: &mut String) -> Result<(), OnboardErrors> {
-//     // Wait for user input
-//     let stdin = io::stdin();
+use std::io::{self, Write};
 
-//     let x = stdin.read_line(input).unwrap();
-
-//     input = input.trim();
-//     Ok(())
-// }
+pub fn print_right(msg: &str) {
+    if let Some(size) = termsize::get() {
+        let width = size.cols as usize;
+        let msg_len = msg.chars().count();
+        if msg_len < width {
+            print!("{:>width$}\r\n", msg, width = width);
+        } else {
+            println!("{msg}"); // fallback if msg is too long
+        }
+    } else {
+        println!("{msg}",); // fallback if we can't detect size
+    }
+    io::stdout().flush().unwrap();
+}

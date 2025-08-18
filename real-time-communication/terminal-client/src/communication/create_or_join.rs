@@ -1,6 +1,7 @@
 use crate::{
     communication::structs::Messages,
     errors::{CreateErrors, JoinErrors, OnboardErrors},
+    helper::print_right,
     user_onboard::print_help,
 };
 use futures::future::join;
@@ -122,8 +123,10 @@ impl Communication {
                         match msg {
                             Messages::Message { from, text } => {
                                 let user_name = username_clone_read.read().await;
+                                let user_output = format!("[{from}]");
+                                print_right(&user_output);
+                                print_right(&text);
                                 println!("┌─[{user_name}]─]");
-                                println!("Text received: {text}\nfrom: {from}")
                             }
                         }
                     }
