@@ -1,14 +1,20 @@
 use crate::{
+    communication::structs::Messages,
     errors::{CreateErrors, JoinErrors, OnboardErrors},
     user_onboard::print_help,
 };
 use futures::future::join;
+use serde_json::json;
 use std::{
-    io::{self, Read, Write},
-    time::Duration,
+    io::{self as std_io, Write},
+    sync::Arc,
 };
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::{net::TcpStream, time::sleep};
+use tokio::{
+    io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader},
+    net::TcpStream,
+    sync::RwLock,
+};
+
 pub struct Communication {
     pub user_name: String,
     pub joined_room: Option<String>,
@@ -27,10 +33,10 @@ impl Communication {
     pub async fn user_response_onboarding(&mut self) -> Result<(), OnboardErrors> {
         loop {
             print!("┌─[{}]─]\n└─▶ ", self.user_name);
-            io::stdout().flush().unwrap(); // Force flush
+            std_io::stdout().flush().unwrap(); // Force flush
 
             // Wait for user input
-            let stdin = io::stdin();
+            let stdin = std_io::stdin();
             let mut input = String::new();
             stdin.read_line(&mut input).unwrap();
             let input = input.trim();
@@ -54,10 +60,10 @@ impl Communication {
 
     /// This function is used to join the room in the server
     /// It will simply send some TCP requests to it and then start messaging it
-    async fn create_room(&self, stream: TcpStream) -> Result<(), CreateErrors> {
+    async fn create_room(&mut self, stream: TcpStream) -> Result<(), CreateErrors> {
         // Wait for user input
         println!("Input the room name:");
-        let stdin = io::stdin();
+        let stdin = std_io::stdin();
         let mut input = String::new();
         stdin.read_line(&mut input).unwrap();
         let input = input.trim();
@@ -67,9 +73,15 @@ impl Communication {
             .map_err(|_| CreateErrors::RoomNotCreated("Room not created"))
     }
 
-    async fn join_room(&self, room: &str, mut stream: TcpStream) -> Result<(), JoinErrors> {
-        println!("Joining room");
-        let join_msg = format!(r#"{{"type":"JoinRoom","room":"{room}"}}{}"#, "\n");
+    async fn join_room(&mut self, room: &str, mut stream: TcpStream) -> Result<(), JoinErrors> {
+        self.joined_room = Some(String::from(room));
+        println!("Joined room: {room}");
+        let join_msg = json!({
+            "type": "JoinRoom",
+            "room": room,
+        })
+        .to_string()
+            + "\n";
         let join_bfr = join_msg.as_bytes();
 
         stream
@@ -80,8 +92,12 @@ impl Communication {
 
         let (reader, mut writer) = stream.into_split();
 
-        let user_name = self.user_name.clone();
-        let room_write = String::from(room);
+        let user_name = Arc::new(RwLock::new(self.user_name.clone()));
+        let room_write = Arc::new(RwLock::new(String::from(room)));
+
+        let username_clone_read = Arc::clone(&user_name);
+        let username_clone_write = Arc::clone(&user_name);
+        let room_write_clone = Arc::clone(&room_write);
 
         let read_task = tokio::task::spawn(async move {
             let mut buf_reader = BufReader::new(reader);
@@ -95,7 +111,21 @@ impl Communication {
                         break;
                     }
                     Ok(_) => {
-                        println!("Received: {}", line.trim());
+                        let msg: Messages = match serde_json::from_str(line.trim()) {
+                            Ok(c) => c,
+                            Err(_) => {
+                                // println!("Couldn't call line: {line}");
+                                continue;
+                            }
+                        };
+
+                        match msg {
+                            Messages::Message { from, text } => {
+                                let user_name = username_clone_read.read().await;
+                                println!("┌─[{user_name}]─]");
+                                println!("Text received: {text}\nfrom: {from}")
+                            }
+                        }
                     }
                     Err(e) => {
                         eprintln!("Read error: {e}");
@@ -106,27 +136,39 @@ impl Communication {
         });
         let write_task = tokio::task::spawn(async move {
             loop {
-                print!("$ ");
-                io::stdout().flush().unwrap(); // Force flush
-                let stdin = tokio::io::stdin();
-                let mut reader = BufReader::new(stdin).lines();
+                // print prompt first
+                let user_name = username_clone_write.read().await;
+                println!("┌─[{user_name}]─]");
+                io::stdout().flush().await.unwrap();
 
-                while let Ok(Some(line)) = reader.next_line().await {
-                    let msg = format!(
-                        r#"{{"type":"Message","room":"{room_write}","from":"{user_name}","text":"{line}"}}{}"#,
-                        "\n"
-                    );
+                let mut line = String::new();
+                let bytes_read = io::BufReader::new(io::stdin())
+                    .read_line(&mut line)
+                    .await
+                    .unwrap();
 
-                    if let Err(e) = writer.write_all(msg.as_bytes()).await {
-                        eprintln!("Write error: {e}");
-                        break;
-                    }
-                    if let Err(e) = writer.flush().await {
-                        eprintln!("Flush error: {e}");
-                        break;
-                    }
+                if bytes_read == 0 {
+                    break; // EOF (Ctrl+D)
+                }
 
-                    println!("Sent: {line}");
+                let room_write = room_write_clone.read().await;
+
+                let msg = json!({
+                    "type": "Message",
+                    "room": *room_write,
+                    "from": *user_name,
+                    "text": line.trim()
+                })
+                .to_string()
+                    + "\n";
+
+                if let Err(e) = writer.write_all(msg.as_bytes()).await {
+                    eprintln!("Write error: {e}");
+                    break;
+                }
+                if let Err(e) = writer.flush().await {
+                    eprintln!("Flush error: {e}");
+                    break;
                 }
             }
         });
