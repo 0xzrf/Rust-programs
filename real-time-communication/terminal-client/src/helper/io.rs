@@ -15,3 +15,11 @@ pub fn print_right(msg: &str) {
     }
     io::stdout().flush().unwrap();
 }
+
+pub fn get_input() -> String {
+    let mut input = String::from("");
+    let stdin = std::io::stdin();
+
+    stdin.read_line(&mut input).unwrap();
+    input
+}

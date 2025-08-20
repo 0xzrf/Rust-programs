@@ -1,7 +1,7 @@
 use crate::{
     communication::structs::Messages,
     errors::{CreateErrors, JoinErrors, OnboardErrors},
-    helper::{print_right, race},
+    helper::{get_input, print_right, race},
     user_onboard::print_help,
 };
 
@@ -37,12 +37,8 @@ impl Communication {
             print!("┌─[{}]─]\n└─▶ ", self.user_name);
             std_io::stdout().flush().unwrap(); // Force flush
 
-            // Wait for user input
-            let stdin = std_io::stdin();
-            let mut input = String::new();
-            stdin.read_line(&mut input).unwrap();
-            let input = input.trim();
-            let (cmd, arg) = input.split_once(" ").unwrap_or((input, ""));
+            let input = get_input();
+            let (cmd, arg) = input.split_once(" ").unwrap_or((&input, ""));
 
             let stream = match self
                 .connect_server()
@@ -78,12 +74,9 @@ impl Communication {
     async fn create_room(&mut self, stream: TcpStream) -> Result<(), CreateErrors> {
         // Wait for user input
         println!("Input the room name:");
-        let stdin = std_io::stdin();
-        let mut input = String::new();
-        stdin.read_line(&mut input).unwrap();
-        let input = input.trim();
+        let input = get_input();
 
-        self.join_room(input, stream)
+        self.join_room(&input, stream)
             .await
             .map_err(|_| CreateErrors::RoomNotCreated("Room not created"))
     }
