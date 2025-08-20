@@ -190,6 +190,7 @@ impl Communication {
             }
         });
 
+        // We're racing the output here because once the write task ends, we need to stop the read task as well
         race(read_task, write_task).await;
 
         Ok(())
