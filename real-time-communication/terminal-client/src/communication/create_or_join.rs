@@ -50,7 +50,7 @@ impl Communication {
             };
 
             match cmd {
-                "/create" => self.create_room(stream).await?,
+                "/create" => self.create_room(arg, stream).await?,
                 "/join" => self.join_room(arg, stream).await?,
                 "/help" => {
                     print_help();
@@ -71,19 +71,28 @@ impl Communication {
 
     /// This function is used to join the room in the server
     /// It will simply send some TCP requests to it and then start messaging it
-    async fn create_room(&mut self, stream: TcpStream) -> Result<(), CreateErrors> {
-        // Wait for user input
-        println!("Input the room name:");
-        let input = get_input();
+    async fn create_room(&mut self, room: &str, mut stream: TcpStream) -> Result<(), CreateErrors> {
+        let create_json = json!({
+            "type": "CreateRoom",
+            "room": room,
+        })
+        .to_string()
+            + "\n";
+        let create_bfr = create_json.as_bytes();
 
-        self.join_room(&input, stream)
+        stream
+            .write_all(create_bfr)
+            .await
+            .expect("Couldn't send buffer");
+        stream.flush().await.unwrap();
+
+        self.join_room(room, stream)
             .await
             .map_err(|_| CreateErrors::RoomNotCreated("Room not created"))
     }
 
     async fn join_room(&mut self, room: &str, mut stream: TcpStream) -> Result<(), JoinErrors> {
         self.joined_room = Some(String::from(room));
-        println!("Joined room: {room}");
         let join_msg = json!({
             "type": "JoinRoom",
             "room": room,
@@ -114,8 +123,9 @@ impl Communication {
         let read_task = tokio::task::spawn(async move {
             let mut buf_reader = BufReader::new(reader);
             let mut line = String::new();
+            let mut done = false;
 
-            loop {
+            while !done {
                 line.clear();
                 match buf_reader.read_line(&mut line).await {
                     Ok(0) => {
@@ -138,6 +148,19 @@ impl Communication {
                                 print_right(&text);
                                 println!("┌─[{user_name}]─]");
                             }
+                            Messages::Error { msg } => {
+                                println!("{msg}");
+                                done = true;
+                                break;
+                            }
+                            Messages::Joined { room } => {
+                                println!("Joined room: {room}");
+                                break;
+                            }
+                            Messages::Created { room } => {
+                                println!("{room}");
+                                break;
+                            }
                         }
                     }
                     Err(e) => {
@@ -150,7 +173,8 @@ impl Communication {
         let write_task = tokio::task::spawn(async move {
             loop {
                 let user_name = username_clone_write.read().await;
-                println!("┌─[{user_name}]─]");
+                let room_write = room_write_clone.read().await;
+                println!("┌─[{user_name}]─[{room_write}]]");
                 io::stdout().flush().await.unwrap();
 
                 let mut line = String::new();
@@ -160,15 +184,13 @@ impl Communication {
                     .unwrap();
 
                 if bytes_read == 0 {
-                    break; // EOF (Ctrl+D)
+                    break;
                 }
 
                 if line.trim().eq_ignore_ascii_case("/leave") {
                     println!("Leaving room");
                     break;
                 }
-
-                let room_write = room_write_clone.read().await;
 
                 let msg = json!({
                     "type": "Message",
