@@ -1,5 +1,7 @@
 use terminal_client::run;
 
 fn main() {
-    run().unwrap();
+    if let Err(error) = run() {
+        eprintln!("{error}");
+    }
 }

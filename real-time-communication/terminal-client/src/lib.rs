@@ -4,20 +4,20 @@ mod helper;
 mod user_onboard;
 
 use tokio::runtime::Runtime;
-pub use {communication::*, errors::MainErrors, user_onboard::print_minimal_welcome};
+pub use {communication::*, errors::OnboardErrors, user_onboard::print_minimal_welcome};
 
-pub fn run() -> Result<(), MainErrors> {
+pub fn run() -> Result<(), OnboardErrors> {
     print_minimal_welcome();
-    let user_name = std::env::var("USER").unwrap();
+    let user_name = std::env::var("USER").unwrap_or("Guest".to_string());
 
     let mut communication = Communication::build(user_name);
 
-    block_on(communication.user_response_onboarding()).unwrap();
+    async_runtime(communication.user_response_onboarding())?;
 
     Ok(())
 }
 
-pub fn block_on<F: Future>(future: F) -> F::Output {
+pub fn async_runtime<F: Future>(future: F) -> F::Output {
     let rt = Runtime::new().unwrap();
     rt.block_on(future)
 }

@@ -44,7 +44,14 @@ impl Communication {
             let input = input.trim();
             let (cmd, arg) = input.split_once(" ").unwrap_or((input, ""));
 
-            let stream = self.connect_server().await.unwrap();
+            let stream = match self
+                .connect_server()
+                .await
+                .map_err(|_| OnboardErrors::ServerError("Couldn't connect to the server"))
+            {
+                Ok(tcp_stream) => tcp_stream,
+                Err(err) => return Err(err),
+            };
 
             match cmd {
                 "/create" => self.create_room(stream).await?,

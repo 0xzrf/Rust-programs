@@ -1,8 +1,21 @@
+use std::fmt::Display;
+
 #[derive(Debug)]
 pub enum OnboardErrors {
     CreateErrors(&'static str),
     JoinErrors(&'static str),
     ServerError(&'static str),
+}
+
+impl Display for OnboardErrors {
+    // This trait requires `fmt` with this exact signature.
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match &self {
+            OnboardErrors::CreateErrors(err_str) => write!(f, "Create Error: {err_str}"),
+            OnboardErrors::JoinErrors(err_str) => write!(f, "Join Error: {err_str}"),
+            OnboardErrors::ServerError(err_str) => write!(f, "Server Error: {err_str}"),
+        }
+    }
 }
 
 #[derive(Debug)]
