@@ -13,8 +13,17 @@ type Tx = mpsc::UnboundedSender<ServerMessage>;
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 enum ClientCommand {
-    JoinRoom { room: String },
-    Message { room: String, text: String },
+    JoinRoom {
+        room: String,
+    },
+    CreateRoom {
+        room: String,
+    },
+    Message {
+        room: String,
+        text: String,
+        from: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -30,6 +39,9 @@ enum ServerMessage {
     },
     Error {
         msg: String,
+    },
+    Created {
+        room: String,
     },
 }
 
@@ -103,25 +115,44 @@ async fn handle_client(stream: TcpStream, state: SharedState) -> Result<(), Erro
         };
 
         match cmd {
+            ClientCommand::CreateRoom { room } => {
+                let mut state_guard = state.write().await;
+
+                if state_guard.rooms.get(&room).is_some() {
+                    let _ = tx.send(ServerMessage::Error {
+                        msg: format!("Room: {room} already exist"),
+                    });
+                    break;
+                }
+                state_guard.rooms.insert(
+                    room.clone(),
+                    Arc::new(Mutex::new(Room {
+                        members: HashMap::new(),
+                    })),
+                );
+                let _ = tx.send(ServerMessage::Created {
+                    room: format!("Created room {room}"),
+                });
+            }
             ClientCommand::JoinRoom { room } => {
                 println!("Joining room: {room}");
                 let room_arc = {
-                    let mut state_guard = state.write().await;
-                    state_guard
-                        .rooms
-                        .entry(room.clone())
-                        .or_insert_with(|| {
-                            Arc::new(Mutex::new(Room {
-                                members: HashMap::new(),
-                            }))
-                        })
-                        .clone()
+                    let state_guard = state.write().await;
+
+                    if state_guard.rooms.get(&room).is_none() {
+                        let _ = tx.send(ServerMessage::Error {
+                            msg: format!("Room: {room} does not exist"),
+                        });
+                        break;
+                    }
+
+                    state_guard.rooms.get(&room).unwrap().clone()
                 };
                 let mut room_guard = room_arc.lock().await;
                 room_guard.members.insert(id, tx.clone());
                 let _ = tx.send(ServerMessage::Joined { room });
             }
-            ClientCommand::Message { room, text } => {
+            ClientCommand::Message { room, text, from } => {
                 println!("Sending message to room: {room}");
                 let maybe_room = {
                     let state_guard = state.read().await;
@@ -133,7 +164,7 @@ async fn handle_client(stream: TcpStream, state: SharedState) -> Result<(), Erro
                         if *other_id != id {
                             let _ = member_tx.send(ServerMessage::Message {
                                 room: room.clone(),
-                                from: id.to_string(),
+                                from: from.to_string(),
                                 text: text.clone(),
                             });
                         }
