@@ -12,7 +12,10 @@ use std::{
 };
 use tokio::{
     io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader},
-    net::TcpStream,
+    net::{
+        TcpStream,
+        tcp::{OwnedReadHalf, OwnedWriteHalf},
+    },
     sync::RwLock,
 };
 
@@ -37,6 +40,8 @@ impl Communication {
             print!("┌─[{}]─]\n└─▶ ", self.user_name);
             std_io::stdout().flush().unwrap(); // Force flush
 
+            println!("Plz give your input");
+
             let input = get_input();
             let (cmd, arg) = input.split_once(" ").unwrap_or((&input, ""));
 
@@ -49,7 +54,8 @@ impl Communication {
                 Err(err) => return Err(err),
             };
 
-            match cmd {
+            println!("Sending cmd: {cmd}");
+            match cmd.trim() {
                 "/create" => self.create_room(arg, stream).await?,
                 "/join" => self.join_room(arg, stream).await?,
                 "/help" => {
@@ -114,106 +120,22 @@ impl Communication {
             Arc::new(RwLock::new(String::from(room))),
         );
 
-        let (username_clone_read, username_clone_write, room_write_clone) = (
+        let (username_clone_read, username_clone_write, room_write_clone, room_read_clone) = (
             Arc::clone(&user_name),
             Arc::clone(&user_name),
             Arc::clone(&room_write),
+            Arc::clone(&room_write),
         );
 
-        let read_task = tokio::task::spawn(async move {
-            let mut buf_reader = BufReader::new(reader);
-            let mut line = String::new();
-            let mut done = false;
+        // We're using tokio::select! because it stops the async function the moment one of them stops.
+        tokio::select! {
+            _ = Self::read_task(reader, room_read_clone, username_clone_read) => {
 
-            while !done {
-                line.clear();
-                match buf_reader.read_line(&mut line).await {
-                    Ok(0) => {
-                        println!("Connection closed by server");
-                        break;
-                    }
-                    Ok(_) => {
-                        let msg: Messages = match serde_json::from_str(line.trim()) {
-                            Ok(c) => c,
-                            Err(_) => {
-                                continue;
-                            }
-                        };
+            },
+            _ = Self::write_task(&mut writer, room_write_clone, username_clone_write) => {
 
-                        match msg {
-                            Messages::Message { from, text } => {
-                                let user_name = username_clone_read.read().await;
-                                let user_output = format!("[{from}]");
-                                print_right(&user_output);
-                                print_right(&text);
-                                println!("┌─[{user_name}]─]");
-                            }
-                            Messages::Error { msg } => {
-                                println!("{msg}");
-                                done = true;
-                                break;
-                            }
-                            Messages::Joined { room } => {
-                                println!("Joined room: {room}");
-                                break;
-                            }
-                            Messages::Created { room } => {
-                                println!("{room}");
-                                break;
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Read error: {e}");
-                        break;
-                    }
-                }
             }
-        });
-        let write_task = tokio::task::spawn(async move {
-            loop {
-                let user_name = username_clone_write.read().await;
-                let room_write = room_write_clone.read().await;
-                println!("┌─[{user_name}]─[{room_write}]]");
-                io::stdout().flush().await.unwrap();
-
-                let mut line = String::new();
-                let bytes_read = io::BufReader::new(io::stdin())
-                    .read_line(&mut line)
-                    .await
-                    .unwrap();
-
-                if bytes_read == 0 {
-                    break;
-                }
-
-                if line.trim().eq_ignore_ascii_case("/leave") {
-                    println!("Leaving room");
-                    break;
-                }
-
-                let msg = json!({
-                    "type": "Message",
-                    "room": *room_write,
-                    "from": *user_name,
-                    "text": line.trim()
-                })
-                .to_string()
-                    + "\n";
-
-                if let Err(e) = writer.write_all(msg.as_bytes()).await {
-                    eprintln!("Write error: {e}");
-                    break;
-                }
-                if let Err(e) = writer.flush().await {
-                    eprintln!("Flush error: {e}");
-                    break;
-                }
-            }
-        });
-
-        // We're racing the output here because once the write task ends, we need to stop the read task as well
-        race(read_task, write_task).await;
+        }
 
         Ok(())
     }
@@ -225,5 +147,112 @@ impl Communication {
         }
         println!("Couldn't return");
         Err(OnboardErrors::ServerError("Couldn't return"))
+    }
+
+    async fn read_task(
+        reader: OwnedReadHalf,
+        room_read_clone: Arc<RwLock<String>>,
+        username_clone_read: Arc<RwLock<String>>,
+    ) {
+        let mut buf_reader = BufReader::new(reader);
+        let mut line = String::new();
+        let mut done = false;
+
+        while !done {
+            println!("Starting read task");
+            line.clear();
+            match buf_reader.read_line(&mut line).await {
+                Ok(0) => {
+                    println!("Connection closed by server");
+                    break;
+                }
+                Ok(_) => {
+                    let msg: Messages = match serde_json::from_str(line.trim()) {
+                        Ok(c) => c,
+                        Err(_) => {
+                            continue;
+                        }
+                    };
+
+                    match msg {
+                        Messages::Message { from, text } => {
+                            let room_write = room_read_clone.read().await;
+
+                            let user_name = username_clone_read.read().await;
+                            let user_output = format!("[{from}]");
+                            print_right(&user_output);
+                            print_right(&text);
+                            println!("┌─[{user_name}]─[{room_write}]]");
+                        }
+                        Messages::Error { msg } => {
+                            println!("{msg}");
+                            done = true;
+                            break;
+                        }
+                        Messages::Joined { room } => {
+                            println!("Joined room: {room}");
+                            break;
+                        }
+                        Messages::Created { room } => {
+                            println!("{room}");
+                            break;
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Read error: {e}");
+                    break;
+                }
+            }
+        }
+        println!("Finished reading");
+    }
+
+    async fn write_task(
+        writer: &mut OwnedWriteHalf,
+        room_write_clone: Arc<RwLock<String>>,
+        username_clone_write: Arc<RwLock<String>>,
+    ) {
+        loop {
+            println!("Starting write task");
+            let user_name = username_clone_write.read().await;
+            let room_write = room_write_clone.read().await;
+            println!("┌─[{user_name}]─[{room_write}]]");
+            io::stdout().flush().await.unwrap();
+
+            let mut line = String::new();
+            let bytes_read = io::BufReader::new(io::stdin())
+                .read_line(&mut line)
+                .await
+                .unwrap();
+
+            if bytes_read == 0 {
+                break;
+            }
+
+            if line.trim().eq_ignore_ascii_case("/leave") {
+                println!("Leaving room");
+                break;
+            }
+
+            let msg = json!({
+                "type": "Message",
+                "room": *room_write,
+                "from": *user_name,
+                "text": line.trim()
+            })
+            .to_string()
+                + "\n";
+
+            if let Err(e) = writer.write_all(msg.as_bytes()).await {
+                eprintln!("Write error: {e}");
+                break;
+            }
+            if let Err(e) = writer.flush().await {
+                eprintln!("Flush error: {e}");
+                break;
+            }
+        }
+        println!("Ending write task");
     }
 }
