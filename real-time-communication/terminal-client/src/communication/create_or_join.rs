@@ -1,7 +1,7 @@
 use crate::{
     communication::structs::Messages,
     errors::{CreateErrors, JoinErrors, OnboardErrors},
-    helper::{get_input, print_right, race},
+    helper::{get_input, print_center, print_right},
     user_onboard::print_help,
 };
 
@@ -9,6 +9,7 @@ use serde_json::json;
 use std::{
     io::{self as std_io, Write},
     sync::Arc,
+    time::Duration,
 };
 use tokio::{
     io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -35,12 +36,9 @@ impl Communication {
     /// This is the place that will handle continuousely asking user for the command they want to use
     /// It requres no arguments, but has the possibility of erroring out
     pub async fn user_response_onboarding(&mut self) -> Result<(), OnboardErrors> {
-        let mut done = false;
-        while !done {
+        loop {
             print!("┌─[{}]─]\n└─▶ ", self.user_name);
             std_io::stdout().flush().unwrap(); // Force flush
-
-            println!("Plz give your input");
 
             let input = get_input();
             let (cmd, arg) = input.split_once(" ").unwrap_or((&input, ""));
@@ -54,7 +52,6 @@ impl Communication {
                 Err(err) => return Err(err),
             };
 
-            println!("Sending cmd: {cmd}");
             match cmd.trim() {
                 "/create" => self.create_room(arg, stream).await?,
                 "/join" => self.join_room(arg, stream).await?,
@@ -66,7 +63,6 @@ impl Communication {
                 }
                 "/quit" => {
                     println!("Quiting app...");
-                    done = true;
                     break;
                 }
                 _ => println!("Invalid command"),
@@ -98,6 +94,7 @@ impl Communication {
     }
 
     async fn join_room(&mut self, room: &str, mut stream: TcpStream) -> Result<(), JoinErrors> {
+        print_center(&format!("Joining room: {room}"));
         self.joined_room = Some(String::from(room));
         let join_msg = json!({
             "type": "JoinRoom",
@@ -113,7 +110,7 @@ impl Communication {
             .expect("Couldn't send buffer");
         stream.flush().await.unwrap();
 
-        let (reader, mut writer) = stream.into_split();
+        let (reader, writer) = stream.into_split();
 
         let (user_name, room_write) = (
             Arc::new(RwLock::new(self.user_name.clone())),
@@ -126,13 +123,19 @@ impl Communication {
             Arc::clone(&room_write),
             Arc::clone(&room_write),
         );
+        let mut write_task_handle = tokio::spawn(Self::write_task(
+            writer,
+            room_write_clone,
+            username_clone_write,
+        ));
 
         // We're using tokio::select! because it stops the async function the moment one of them stops.
         tokio::select! {
+            biased;
             _ = Self::read_task(reader, room_read_clone, username_clone_read) => {
-
+                write_task_handle.abort();
             },
-            _ = Self::write_task(&mut writer, room_write_clone, username_clone_write) => {
+            _ = &mut write_task_handle => {
 
             }
         }
@@ -142,10 +145,9 @@ impl Communication {
 
     async fn connect_server(&self) -> Result<TcpStream, OnboardErrors> {
         // Connect to the first nc listener (terminal 1)
-        if let Ok(stream) = TcpStream::connect("127.0.0.1:8080").await {
+        if let Ok(stream) = TcpStream::connect("https://mean-rats-glow.loca.lt").await {
             return Ok(stream);
         }
-        println!("Couldn't return");
         Err(OnboardErrors::ServerError("Couldn't return"))
     }
 
@@ -156,10 +158,8 @@ impl Communication {
     ) {
         let mut buf_reader = BufReader::new(reader);
         let mut line = String::new();
-        let mut done = false;
 
-        while !done {
-            println!("Starting read task");
+        loop {
             line.clear();
             match buf_reader.read_line(&mut line).await {
                 Ok(0) => {
@@ -174,6 +174,8 @@ impl Communication {
                         }
                     };
 
+                    // println!("Msg received from server: {msg:?}");
+
                     match msg {
                         Messages::Message { from, text } => {
                             let room_write = room_read_clone.read().await;
@@ -182,20 +184,17 @@ impl Communication {
                             let user_output = format!("[{from}]");
                             print_right(&user_output);
                             print_right(&text);
-                            println!("┌─[{user_name}]─[{room_write}]]");
+                            print!("┌─[{user_name}]─{room_write}");
                         }
                         Messages::Error { msg } => {
-                            println!("{msg}");
-                            done = true;
+                            print_center(&msg);
                             break;
                         }
                         Messages::Joined { room } => {
-                            println!("Joined room: {room}");
-                            break;
+                            print_center(&format!("Joined room: {room}"));
                         }
                         Messages::Created { room } => {
-                            println!("{room}");
-                            break;
+                            print_center(&room);
                         }
                     }
                 }
@@ -205,22 +204,22 @@ impl Communication {
                 }
             }
         }
-        println!("Finished reading");
     }
 
     async fn write_task(
-        writer: &mut OwnedWriteHalf,
+        mut writer: OwnedWriteHalf,
         room_write_clone: Arc<RwLock<String>>,
         username_clone_write: Arc<RwLock<String>>,
     ) {
+        // adding sleep here because when the read and write task start, the joined msg received create a bit of abrupt user interface
+        tokio::time::sleep(Duration::from_millis(100)).await;
         loop {
-            println!("Starting write task");
             let user_name = username_clone_write.read().await;
             let room_write = room_write_clone.read().await;
-            println!("┌─[{user_name}]─[{room_write}]]");
-            io::stdout().flush().await.unwrap();
+            // io::stdout().flush().await.unwrap();
 
             let mut line = String::new();
+            print!("┌─[{user_name}]─{room_write}");
             let bytes_read = io::BufReader::new(io::stdin())
                 .read_line(&mut line)
                 .await
@@ -253,6 +252,5 @@ impl Communication {
                 break;
             }
         }
-        println!("Ending write task");
     }
 }
