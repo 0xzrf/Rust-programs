@@ -131,7 +131,7 @@ async fn handle_client(stream: TcpStream, state: SharedState) -> Result<(), Erro
                     })),
                 );
                 let _ = tx.send(ServerMessage::Created {
-                    room: format!("Created room {room}"),
+                    room: format!("Created room: {room}"),
                 });
             }
             ClientCommand::JoinRoom { room } => {
@@ -141,7 +141,7 @@ async fn handle_client(stream: TcpStream, state: SharedState) -> Result<(), Erro
 
                     if state_guard.rooms.get(&room).is_none() {
                         let _ = tx.send(ServerMessage::Error {
-                            msg: format!("Room: {room} does not exist"),
+                            msg: format!("Room: {} does not exist", room.trim()),
                         });
                         break;
                     }

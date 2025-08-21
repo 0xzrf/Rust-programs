@@ -289,6 +289,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "server"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "signal-hook-registry"
 version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -317,16 +327,6 @@ checksum = "233504af464074f9d066d7b5416c5f9b894a5862a6506e306f7b816cdd6f1807"
 dependencies = [
  "libc",
  "windows-sys",
-]
-
-[[package]]
-name = "some"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tokio",
- "uuid",
 ]
 
 [[package]]
