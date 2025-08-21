@@ -145,7 +145,7 @@ impl Communication {
 
     async fn connect_server(&self) -> Result<TcpStream, OnboardErrors> {
         // Connect to the first nc listener (terminal 1)
-        if let Ok(stream) = TcpStream::connect("https://mean-rats-glow.loca.lt").await {
+        if let Ok(stream) = TcpStream::connect("127.0.0.1:8080").await {
             return Ok(stream);
         }
         Err(OnboardErrors::ServerError("Couldn't return"))
