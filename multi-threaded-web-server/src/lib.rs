@@ -6,10 +6,13 @@ use std::{
     time::Duration,
 };
 
+use tokio::{io::BufReader as async_BufReader, net::TcpStream as async_TcpStream};
+
 mod fork;
 mod mt_async_io;
 mod st_async_io;
 mod thread_pooling;
+pub use st_async_io::*;
 pub use thread_pooling::*;
 
 pub fn handle_connection(mut stream: TcpStream) {
