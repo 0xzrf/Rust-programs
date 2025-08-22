@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::handle_connection;
+use crate::async_handle_connection;
 use tokio::{
     net::TcpStream,
     sync::{
@@ -53,7 +53,7 @@ impl STAsyncIO {
         F: FnOnce() + Send + 'static,
     {
         self.execute(|| {
-            handle_connection(stream);
+            async_handle_connection(stream);
         });
     }
 }
