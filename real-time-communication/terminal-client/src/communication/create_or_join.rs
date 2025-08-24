@@ -212,7 +212,6 @@ impl Communication {
     }
 
     async fn write_task(
-        &self,
         mut writer: OwnedWriteHalf,
         room_write_clone: Arc<RwLock<String>>,
         username_clone_write: Arc<RwLock<String>>,
@@ -261,7 +260,7 @@ impl Communication {
         .to_string()
             + "\n";
 
-        if let Err(e) = writer.write_all(msg.as_bytes()).await {
+        if let Err(e) = writer.write_all(msg_to_send.as_bytes()).await {
             eprintln!("Write error: {e}");
             return Err(OnboardErrors::JoinErrors("Couldn't send message"));
         }

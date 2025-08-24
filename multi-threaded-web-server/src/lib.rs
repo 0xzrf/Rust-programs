@@ -11,7 +11,6 @@ use tokio::{
     net::TcpStream as async_TcpStream,
 };
 
-mod fork;
 mod mt_async_io;
 mod st_async_io;
 mod thread_pooling;
