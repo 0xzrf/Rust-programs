@@ -212,6 +212,7 @@ impl Communication {
     }
 
     async fn write_task(
+        &self,
         mut writer: OwnedWriteHalf,
         room_write_clone: Arc<RwLock<String>>,
         username_clone_write: Arc<RwLock<String>>,
@@ -239,23 +240,35 @@ impl Communication {
                 break;
             }
 
-            let msg = json!({
-                "type": "Message",
-                "room": *room_write,
-                "from": *user_name,
-                "text": line.trim()
-            })
-            .to_string()
-                + "\n";
-
-            if let Err(e) = writer.write_all(msg.as_bytes()).await {
-                eprintln!("Write error: {e}");
-                break;
-            }
-            if let Err(e) = writer.flush().await {
-                eprintln!("Flush error: {e}");
-                break;
-            }
+            Self::send_msg(&line, &room_write, &user_name, &mut writer)
+                .await
+                .unwrap();
         }
+    }
+
+    pub async fn send_msg<'a>(
+        msg: &str,
+        room: &str,
+        username: &str,
+        writer: &'a mut OwnedWriteHalf,
+    ) -> Result<&'a mut OwnedWriteHalf, OnboardErrors> {
+        let msg_to_send = json!({
+            "type": "Message",
+            "room": room,
+            "from": username,
+            "text": msg.trim()
+        })
+        .to_string()
+            + "\n";
+
+        if let Err(e) = writer.write_all(msg.as_bytes()).await {
+            eprintln!("Write error: {e}");
+            return Err(OnboardErrors::JoinErrors("Couldn't send message"));
+        }
+        if let Err(e) = writer.flush().await {
+            eprintln!("Flush error: {e}");
+            return Err(OnboardErrors::JoinErrors("Dev error"));
+        }
+        Ok(writer)
     }
 }
