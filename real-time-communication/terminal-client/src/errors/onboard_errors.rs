@@ -5,6 +5,7 @@ pub enum OnboardErrors {
     CreateErrors(&'static str),
     JoinErrors(&'static str),
     ServerError(&'static str),
+    ReadError(&'static str),
 }
 
 impl Display for OnboardErrors {
@@ -14,6 +15,7 @@ impl Display for OnboardErrors {
             OnboardErrors::CreateErrors(err_str) => write!(f, "Create Error: {err_str}"),
             OnboardErrors::JoinErrors(err_str) => write!(f, "Join Error: {err_str}"),
             OnboardErrors::ServerError(err_str) => write!(f, "Server Error: {err_str}"),
+            OnboardErrors::ReadError(err_str) => write!(f, "Read Error: {err_str}"),
         }
     }
 }

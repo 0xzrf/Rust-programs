@@ -79,7 +79,7 @@ impl Communication {
     async fn create_room(
         &mut self,
         room: &str,
-        reader: OwnedReadHalf,
+        mut reader: OwnedReadHalf,
         writer: OwnedWriteHalf,
     ) -> Result<(), CreateErrors> {
         let create_json = json!({
@@ -94,31 +94,14 @@ impl Communication {
             .await
             .unwrap();
 
-        let mut buf_reader = BufReader::new(reader);
-        let mut line = String::new();
+        let msg_received = Self::read_msg(&mut reader)
+            .await
+            .map_err(|err| CreateErrors::RoomNotCreated("Room already exists"))?;
 
-        line.clear();
-        match buf_reader.read_line(&mut line).await {
-            Ok(0) => {
-                println!("Connection closed by server");
-            }
-            Ok(_) => {
-                let msg: Messages = match serde_json::from_str(line.trim()) {
-                    Ok(c) => c,
-                    Err(_) => {
-                        panic!()
-                    }
-                };
-
-                if let Messages::Created { room } = msg {
-                    print_center(&format!(
-                        "Created room: {room}. Join the room using /join {room}"
-                    ));
-                }
-            }
-            Err(err) => {
-                eprintln!("{err}");
-            }
+        if let Messages::Created { room } = msg_received {
+            print_center(&format!(
+                "Room Created: {room}. Join the room using /join {room}"
+            ));
         }
 
         Ok(())
@@ -186,55 +169,31 @@ impl Communication {
     }
 
     async fn read_task(
-        reader: OwnedReadHalf,
+        mut reader: OwnedReadHalf,
         room_read_clone: Arc<RwLock<String>>,
         username_clone_read: Arc<RwLock<String>>,
     ) {
-        let mut buf_reader = BufReader::new(reader);
-        let mut line = String::new();
-
         loop {
-            line.clear();
-            match buf_reader.read_line(&mut line).await {
-                Ok(0) => {
-                    println!("Connection closed by server");
+            let msg = Self::read_msg(&mut reader).await.unwrap();
+            match msg {
+                Messages::Message { from, text } => {
+                    let room_write = room_read_clone.read().await;
+
+                    let user_name = username_clone_read.read().await;
+                    let user_output = format!("[{from}]");
+                    print_right(&user_output);
+                    print_right(&text);
+                    print!("┌─[{user_name}]─{room_write}");
+                }
+                Messages::Error { msg } => {
+                    print_center(&msg);
                     break;
                 }
-                Ok(_) => {
-                    let msg: Messages = match serde_json::from_str(line.trim()) {
-                        Ok(c) => c,
-                        Err(_) => {
-                            continue;
-                        }
-                    };
-
-                    // println!("Msg received from server: {msg:?}");
-
-                    match msg {
-                        Messages::Message { from, text } => {
-                            let room_write = room_read_clone.read().await;
-
-                            let user_name = username_clone_read.read().await;
-                            let user_output = format!("[{from}]");
-                            print_right(&user_output);
-                            print_right(&text);
-                            print!("┌─[{user_name}]─{room_write}");
-                        }
-                        Messages::Error { msg } => {
-                            print_center(&msg);
-                            break;
-                        }
-                        Messages::Joined { room } => {
-                            print_center(&format!("Joined room: {room}"));
-                        }
-                        Messages::Created { room } => {
-                            print_center(&format!("Created room: {room}"));
-                        }
-                    }
+                Messages::Joined { room } => {
+                    print_center(&format!("Joined room: {room}"));
                 }
-                Err(e) => {
-                    eprintln!("Read error: {e}");
-                    break;
+                Messages::Created { room } => {
+                    print_center(&format!("Created room: {room}"));
                 }
             }
         }
@@ -294,5 +253,32 @@ impl Communication {
             return Err(OnboardErrors::JoinErrors("Dev error"));
         }
         Ok(())
+    }
+
+    pub async fn read_msg(reader: &mut OwnedReadHalf) -> Result<Messages, OnboardErrors> {
+        let mut buf_reader = BufReader::new(reader);
+        let mut line = String::new();
+
+        line.clear();
+        match buf_reader.read_line(&mut line).await {
+            Ok(0) => {
+                println!("Connection closed by server");
+                Err(OnboardErrors::ReadError("Connection error"))
+            }
+            Ok(_) => {
+                let msg: Messages = match serde_json::from_str(line.trim()) {
+                    Ok(c) => c,
+                    Err(_) => {
+                        panic!()
+                    }
+                };
+
+                Ok(msg)
+            }
+            Err(err) => {
+                eprintln!("{err}");
+                Err(OnboardErrors::ReadError("An unexpected error occured"))
+            }
+        }
     }
 }
