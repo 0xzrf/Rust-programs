@@ -96,7 +96,7 @@ impl Communication {
 
         let msg_received = Self::read_msg(&mut reader)
             .await
-            .map_err(|err| CreateErrors::RoomNotCreated("Room already exists"))?;
+            .map_err(|_| CreateErrors::RoomNotCreated("Room already exists"))?;
 
         if let Messages::Created { room } = msg_received {
             print_center(&format!(

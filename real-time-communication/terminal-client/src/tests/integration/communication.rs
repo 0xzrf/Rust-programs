@@ -4,13 +4,13 @@ mod communication_tests {
     use tokio::sync::RwLock;
 
     use rand::Rng;
-    use terminal_client::Communication;
+    use terminal_client::{Communication, Messages};
 
     #[tokio::test]
-    async fn test_join_after_connect_successfully() {
-        let mut stream = Communication::connect_server().await.unwrap();
+    async fn test_create_after_connect_successfully() {
+        let stream = Communication::connect_server().await.unwrap();
 
-        let (read, mut writer) = stream.into_split();
+        let (mut read, mut writer) = stream.into_split();
 
         let writer_lock = Arc::new(RwLock::new(writer));
         let mut rng = rand::thread_rng();
@@ -28,5 +28,12 @@ mod communication_tests {
         Communication::send_msg(create_json, Arc::clone(&writer_lock))
             .await
             .unwrap();
+
+        let msg = Communication::read_msg(&mut read).await.unwrap();
+
+        if let Messages::Created { room: created_room } = msg {
+            assert_eq!(created_room, room);
+        }
+        // panic!()
     }
 }
