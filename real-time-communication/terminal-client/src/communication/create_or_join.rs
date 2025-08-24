@@ -43,7 +43,7 @@ impl Communication {
             let input = get_input();
             let (cmd, arg) = input.split_once(" ").unwrap_or((&input, ""));
 
-            let mut stream = match Self::connect_server()
+            let stream = match Self::connect_server()
                 .await
                 .map_err(|_| OnboardErrors::ServerError("Couldn't connect to the server"))
             {
@@ -51,12 +51,13 @@ impl Communication {
                 Err(err) => return Err(err),
             };
 
+            let (reader, writer) = stream.into_split();
+
             match cmd.trim() {
                 "/create" => {
-                    let stream = self.create_room(arg, stream).await?;
-                    self.join_room(arg, stream).await?
+                    self.create_room(arg, writer).await?;
                 }
-                "/join" => self.join_room(arg, stream).await?,
+                "/join" => self.join_room(arg, reader, writer).await?,
                 "/help" => {
                     print_help();
                 }
@@ -78,27 +79,30 @@ impl Communication {
     async fn create_room(
         &mut self,
         room: &str,
-        mut stream: TcpStream,
-    ) -> Result<TcpStream, CreateErrors> {
+        writer: OwnedWriteHalf,
+    ) -> Result<(), CreateErrors> {
         let create_json = json!({
             "type": "CreateRoom",
             "room": room,
         })
         .to_string()
             + "\n";
-        let create_bfr = create_json.as_bytes();
 
-        stream
-            .write_all(create_bfr)
+        let writer_locker = Arc::new(RwLock::new(writer));
+        Self::send_msg(create_json, Arc::clone(&writer_locker))
             .await
-            .expect("Couldn't send buffer");
-        stream.flush().await.unwrap();
+            .unwrap();
 
-        Ok(stream)
+        Ok(())
     }
 
     // Joins a room -> Creates read write streams to read incoming messages and send messages to the server
-    async fn join_room(&mut self, room: &str, mut stream: TcpStream) -> Result<(), JoinErrors> {
+    async fn join_room(
+        &mut self,
+        room: &str,
+        reader: OwnedReadHalf,
+        writer: OwnedWriteHalf,
+    ) -> Result<(), JoinErrors> {
         print_center(&format!("Joining room: {room}"));
         self.joined_room = Some(String::from(room));
         let join_msg = json!({
@@ -107,15 +111,12 @@ impl Communication {
         })
         .to_string()
             + "\n";
-        let join_bfr = join_msg.as_bytes();
 
-        stream
-            .write_all(join_bfr)
+        let writer_locker = Arc::new(RwLock::new(writer));
+
+        Self::send_msg(join_msg, Arc::clone(&writer_locker))
             .await
-            .expect("Couldn't send buffer");
-        stream.flush().await.unwrap();
-
-        let (reader, writer) = stream.into_split();
+            .unwrap();
 
         let (user_name, room_write) = (
             Arc::new(RwLock::new(self.user_name.clone())),
@@ -129,7 +130,7 @@ impl Communication {
             Arc::clone(&room_write),
         );
         let mut write_task_handle = tokio::spawn(Self::write_task(
-            writer,
+            Arc::clone(&writer_locker),
             room_write_clone,
             username_clone_write,
         ));
@@ -212,7 +213,7 @@ impl Communication {
     }
 
     async fn write_task(
-        mut writer: OwnedWriteHalf,
+        writer: Arc<RwLock<OwnedWriteHalf>>,
         room_write_clone: Arc<RwLock<String>>,
         username_clone_write: Arc<RwLock<String>>,
     ) {
@@ -238,36 +239,32 @@ impl Communication {
                 println!("Leaving room");
                 break;
             }
+            let msg_to_send = json!({
+                "type": "Message",
+                "room": *room_write,
+                "from": *user_name,
+                "text": line.trim()
+            })
+            .to_string()
+                + "\n";
 
-            Self::send_msg(&line, &room_write, &user_name, &mut writer)
-                .await
-                .unwrap();
+            Self::send_msg(msg_to_send, writer.clone()).await.unwrap();
         }
     }
 
-    pub async fn send_msg<'a>(
-        msg: &str,
-        room: &str,
-        username: &str,
-        writer: &'a mut OwnedWriteHalf,
-    ) -> Result<&'a mut OwnedWriteHalf, OnboardErrors> {
-        let msg_to_send = json!({
-            "type": "Message",
-            "room": room,
-            "from": username,
-            "text": msg.trim()
-        })
-        .to_string()
-            + "\n";
-
-        if let Err(e) = writer.write_all(msg_to_send.as_bytes()).await {
+    pub async fn send_msg(
+        msg_to_send: String,
+        writer: Arc<RwLock<OwnedWriteHalf>>,
+    ) -> Result<(), OnboardErrors> {
+        let mut new_writer = writer.write().await;
+        if let Err(e) = new_writer.write_all(msg_to_send.as_bytes()).await {
             eprintln!("Write error: {e}");
             return Err(OnboardErrors::JoinErrors("Couldn't send message"));
         }
-        if let Err(e) = writer.flush().await {
+        if let Err(e) = new_writer.flush().await {
             eprintln!("Flush error: {e}");
             return Err(OnboardErrors::JoinErrors("Dev error"));
         }
-        Ok(writer)
+        Ok(())
     }
 }
