@@ -4,7 +4,7 @@ mod helper;
 mod user_onboard;
 
 use tokio::runtime::Runtime;
-pub use {communication::*, errors::OnboardErrors, user_onboard::print_minimal_welcome};
+pub use {communication::*, errors::OnboardErrors, helper::*, user_onboard::print_minimal_welcome};
 
 pub fn run() -> Result<(), OnboardErrors> {
     print_minimal_welcome();
