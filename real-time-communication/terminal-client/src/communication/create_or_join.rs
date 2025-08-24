@@ -55,7 +55,7 @@ impl Communication {
 
             match cmd.trim() {
                 "/create" => {
-                    self.create_room(arg, writer).await?;
+                    self.create_room(arg, reader, writer).await?;
                 }
                 "/join" => self.join_room(arg, reader, writer).await?,
                 "/help" => {
@@ -79,11 +79,12 @@ impl Communication {
     async fn create_room(
         &mut self,
         room: &str,
+        reader: OwnedReadHalf,
         writer: OwnedWriteHalf,
     ) -> Result<(), CreateErrors> {
         let create_json = json!({
             "type": "CreateRoom",
-            "room": room,
+            "room": room.trim(),
         })
         .to_string()
             + "\n";
@@ -92,6 +93,33 @@ impl Communication {
         Self::send_msg(create_json, Arc::clone(&writer_locker))
             .await
             .unwrap();
+
+        let mut buf_reader = BufReader::new(reader);
+        let mut line = String::new();
+
+        line.clear();
+        match buf_reader.read_line(&mut line).await {
+            Ok(0) => {
+                println!("Connection closed by server");
+            }
+            Ok(_) => {
+                let msg: Messages = match serde_json::from_str(line.trim()) {
+                    Ok(c) => c,
+                    Err(_) => {
+                        panic!()
+                    }
+                };
+
+                if let Messages::Created { room } = msg {
+                    print_center(&format!(
+                        "Created room: {room}. Join the room using /join {room}"
+                    ));
+                }
+            }
+            Err(err) => {
+                eprintln!("{err}");
+            }
+        }
 
         Ok(())
     }
@@ -107,7 +135,7 @@ impl Communication {
         self.joined_room = Some(String::from(room));
         let join_msg = json!({
             "type": "JoinRoom",
-            "room": room,
+            "room": room.trim(),
         })
         .to_string()
             + "\n";
@@ -200,7 +228,7 @@ impl Communication {
                             print_center(&format!("Joined room: {room}"));
                         }
                         Messages::Created { room } => {
-                            print_center(&room);
+                            print_center(&format!("Created room: {room}"));
                         }
                     }
                 }
@@ -241,7 +269,7 @@ impl Communication {
             }
             let msg_to_send = json!({
                 "type": "Message",
-                "room": *room_write,
+                "room": *room_write.trim(),
                 "from": *user_name,
                 "text": line.trim()
             })

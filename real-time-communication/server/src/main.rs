@@ -130,9 +130,7 @@ async fn handle_client(stream: TcpStream, state: SharedState) -> Result<(), Erro
                         members: HashMap::new(),
                     })),
                 );
-                let _ = tx.send(ServerMessage::Created {
-                    room: format!("Created room: {room}"),
-                });
+                let _ = tx.send(ServerMessage::Created { room });
             }
             ClientCommand::JoinRoom { room } => {
                 println!("Joining room: {room}");
