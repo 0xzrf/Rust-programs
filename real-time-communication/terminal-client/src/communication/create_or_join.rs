@@ -43,7 +43,7 @@ impl Communication {
             let input = get_input();
             let (cmd, arg) = input.split_once(" ").unwrap_or((&input, ""));
 
-            let stream = match Self::connect_server()
+            let mut stream = match Self::connect_server()
                 .await
                 .map_err(|_| OnboardErrors::ServerError("Couldn't connect to the server"))
             {
@@ -52,7 +52,10 @@ impl Communication {
             };
 
             match cmd.trim() {
-                "/create" => self.create_room(arg, stream).await?,
+                "/create" => {
+                    let stream = self.create_room(arg, stream).await?;
+                    self.join_room(arg, stream).await?
+                }
                 "/join" => self.join_room(arg, stream).await?,
                 "/help" => {
                     print_help();
@@ -72,7 +75,11 @@ impl Communication {
 
     /// This function is used to join the room in the server
     /// It will simply send some TCP requests to it and then start messaging it
-    async fn create_room(&mut self, room: &str, mut stream: TcpStream) -> Result<(), CreateErrors> {
+    async fn create_room(
+        &mut self,
+        room: &str,
+        mut stream: TcpStream,
+    ) -> Result<TcpStream, CreateErrors> {
         let create_json = json!({
             "type": "CreateRoom",
             "room": room,
@@ -87,11 +94,10 @@ impl Communication {
             .expect("Couldn't send buffer");
         stream.flush().await.unwrap();
 
-        self.join_room(room, stream)
-            .await
-            .map_err(|_| CreateErrors::RoomNotCreated("Room not created"))
+        Ok(stream)
     }
 
+    // Joins a room -> Creates read write streams to read incoming messages and send messages to the server
     async fn join_room(&mut self, room: &str, mut stream: TcpStream) -> Result<(), JoinErrors> {
         print_center(&format!("Joining room: {room}"));
         self.joined_room = Some(String::from(room));
