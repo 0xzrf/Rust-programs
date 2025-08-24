@@ -43,8 +43,7 @@ impl Communication {
             let input = get_input();
             let (cmd, arg) = input.split_once(" ").unwrap_or((&input, ""));
 
-            let stream = match self
-                .connect_server()
+            let stream = match Self::connect_server()
                 .await
                 .map_err(|_| OnboardErrors::ServerError("Couldn't connect to the server"))
             {
@@ -143,7 +142,7 @@ impl Communication {
         Ok(())
     }
 
-    async fn connect_server(&self) -> Result<TcpStream, OnboardErrors> {
+    pub async fn connect_server() -> Result<TcpStream, OnboardErrors> {
         // Connect to the first nc listener (terminal 1)
         if let Ok(stream) = TcpStream::connect("127.0.0.1:8080").await {
             return Ok(stream);
